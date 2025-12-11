@@ -341,7 +341,7 @@ export function MerchantReportPage() {
                       <td className="py-2 pr-4">{it.device}</td>
                       <td className="py-2 pr-4">{it.outlet}</td>
                       <td className="py-2 pr-4">{it.terminal}</td>
-                      <td className="py-2 pr-4">{it.rrn}</td>
+                      <td className="py-2 pr-4 font-mono">{it.rrn}</td>
                       <td className="py-2 pr-4">{it.fromname}</td>
                       <td className="py-2 pr-4 font-mono">{maskAcc(it.fromacc)}</td>
                       <td className="py-2 pr-4 font-mono">{maskAcc(it.toacc)}</td>
