@@ -75,15 +75,16 @@ const ModalContents = {
     };
 
     return (
-      <Stepper
-        value={step}
-        onValueChange={setStep}
-        indicators={{
-          completed: <Check className="size-4" />,
-          loading: <LoaderCircleIcon className="size-4 animate-spin" />,
-        }}
-        className="space-y-8"
-      >
+      <>
+        <Stepper
+          value={step}
+          onValueChange={setStep}
+          indicators={{
+            completed: <Check className="size-4" />,
+            loading: <LoaderCircleIcon className="size-4 animate-spin" />,
+          }}
+          className="space-y-8"
+        >
           <StepperNav>
             {steps.map((step, index) => (
               <StepperItem
@@ -340,6 +341,7 @@ const ModalContents = {
             ))}
           </StepperPanel>
         </Stepper>
+      </>
     );
   },
   ResetTerminalModalContent: ({ selected, closeModal }) => {
@@ -409,73 +411,73 @@ const ModalContents = {
         </div>
       </div>
     );
-    },
-    ResetPasswordTerminalModalContent: ({ selected, closeModal }) => {
-      const [loading, setLoading] = useState(false);
-      const [merchantUser, setMerchantUser] = useState('');
+  },
+  ResetPasswordTerminalModalContent: ({ selected, closeModal }) => {
+    const [loading, setLoading] = useState(false);
+    const [merchantUser, setMerchantUser] = useState('');
 
-  const merchantUserOptions = (selected?.terminal ?? []).filter(
-    (item) => item?.TerminalID !== 'A01'
-  );
+    const merchantUserOptions = (selected?.terminal ?? []).filter(
+      (item) => item?.TerminalID !== 'A01'
+    );
 
-  const resetPasswordTerminal = async () => {
-    try {
-      setLoading(true);
-      if (!merchantUser) throw new Error('User Merchant harus dipilih');
+    const resetPasswordTerminal = async () => {
+      try {
+        setLoading(true);
+        if (!merchantUser) throw new Error('User Merchant harus dipilih');
 
-      const session = AuthService.retrieveSession();
-      if (!session || !session.kd_user) {
-        throw new Error('Sesi pengguna tidak tersedia. Silakan login kembali.');
+        const session = AuthService.retrieveSession();
+        if (!session || !session.kd_user) {
+          throw new Error('Sesi pengguna tidak tersedia. Silakan login kembali.');
+        }
+
+        await axiosInstance().post('/terminal/reset/password', {
+          kdUser: session.kd_user,
+          merchant_user: merchantUser,
+        });
+
+        // Close modal after successful request
+        closeModal();
+      } catch (error) {
+        console.error('Gagal reset password:', error?.response?.data?.errors ?? error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      await axiosInstance().post('/terminal/reset/password', {
-        kdUser: session.kd_user,
-        merchant_user: merchantUser,
-      });
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 w-1/2">
+            <Select
+              value={merchantUser || undefined}
+              onValueChange={setMerchantUser}
+              indicatorPosition="right"
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="User Merchant" />
+              </SelectTrigger>
+              <SelectContent className="w-full min-w-[16rem]">
+                {merchantUserOptions.map((item) => (
+                  <SelectItem key={item.kd_user} value={item.kd_user} className="uppercase">
+                    {item.kd_user}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-      // Close modal after successful request
-      closeModal();
-    } catch (error) {
-      console.error('Gagal reset password:', error?.response?.data?.errors ?? error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 w-1/2">
-          <Select
-            value={merchantUser || undefined}
-            onValueChange={setMerchantUser}
-            indicatorPosition="right"
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="User Merchant" />
-            </SelectTrigger>
-            <SelectContent className="w-full min-w-[16rem]">
-              {merchantUserOptions.map((item) => (
-                <SelectItem key={item.kd_user} value={item.kd_user} className="uppercase">
-                  {item.kd_user}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-row justify-between">
+          <DialogClose asChild>
+            <Button variant="outline">Tutup</Button>
+          </DialogClose>
+          <Button onClick={resetPasswordTerminal} disabled={loading || !merchantUser}>
+            {loading ? <LoaderCircleIcon className="size-4 animate-spin" /> : null}
+            {loading ? 'Memproses...' : 'Reset Password'}
+          </Button>
         </div>
       </div>
-
-      <div className="flex flex-row justify-between">
-        <DialogClose asChild>
-          <Button variant="outline">Tutup</Button>
-        </DialogClose>
-        <Button onClick={resetPasswordTerminal} disabled={loading || !merchantUser}>
-          {loading ? <LoaderCircleIcon className="size-4 animate-spin" /> : null}
-          {loading ? 'Memproses...' : 'Reset Password'}
-        </Button>
-      </div>
-    </div>
-  );
+    );
 }
 }
 
