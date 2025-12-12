@@ -17,26 +17,26 @@ export function SidebarHeader() {
       <Link to="/layout-1">
         <div className="dark:hidden">
           <img
-            src={toAbsoluteUrl('public/media/bsg/dashboard-dark.png')}
+            src={toAbsoluteUrl('/media/bsg/dashboard-dark.png')}
             className="default-logo h-[4.75rem] max-w-none -ml-14"
             alt="Default Logo"
           />
 
           <img
-            src={toAbsoluteUrl('public/media/bsg/icon.png')}
+            src={toAbsoluteUrl('/media/bsg/icon.png')}
             className="small-logo h-[1.75rem] max-w-none"
             alt="Mini Logo"
           />
         </div>
         <div className="hidden dark:block">
           <img
-            src={toAbsoluteUrl('public/media/bsg/dashboard-light.png')}
+            src={toAbsoluteUrl('/media/bsg/dashboard-light.png')}
             className="default-logo h-[4.75rem] max-w-none -ml-14"
             alt="Default Dark Logo"
           />
 
           <img
-            src={toAbsoluteUrl('public/media/bsg/icon.png')}
+            src={toAbsoluteUrl('/media/bsg/icon.png')}
             className="small-logo h-[1.75rem] max-w-none"
             alt="Mini Logo"
           />
