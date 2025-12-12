@@ -271,7 +271,12 @@ const ModalContents = {
                           Kembali
                         </Button>
                         {selected?.outlet_confirmed_add_device ? (
-                          <Button onClick={addTerminal}>Lanjutkan</Button>
+                          <Button onClick={addTerminal} disabled={loading}>
+                            {loading ? (
+                              <LoaderCircleIcon className="size-4 animate-spin" />
+                            ) : null}
+                            {loading ? 'Memproses...' : 'Lanjutkan'}
+                          </Button>
                         ) : (
                           <DialogClose asChild>
                             <Button variant="outline">Tutup</Button>
@@ -287,7 +292,7 @@ const ModalContents = {
                       <div className="flex flex-wrap">
                         {selected?.outlet_confirmed_add_device ? (
                           <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 p-5 h-full w-full">
-                            Username akan dikirimkan pada email berikut:
+                            Username telah dikirimkan pada email berikut:
                             <br />
                             <br />
                             <div className="flex flex-wrap justify-center items-center font-bold text-2xl">
