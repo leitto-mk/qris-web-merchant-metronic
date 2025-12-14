@@ -26,6 +26,7 @@ const ModalContents = {
     const steps = [{ title: 'Ketentuan' }, { title: 'Konfirmasi' }, { title: 'Kirim' }];
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [sending, setSending] = useState(false);
     const [onShow, setOnShow] = useState(false);
     const [confirmPwd, setConfirmPwd] = useState('');
     const [emailFailAttempts, setEmailFailAttempts] = useState(
@@ -52,7 +53,7 @@ const ModalContents = {
 
     const addTerminal = async () => {
       try {
-        setLoading(true);
+        setSending(true);
         const session = AuthService.retrieveSession();
         if (!session || !session.kd_user) {
           throw new Error('Sesi pengguna tidak tersedia. Silakan login kembali.');
@@ -69,8 +70,7 @@ const ModalContents = {
         setEmailFailAttempts(emailFailAttempts+1);
         console.error('Penambahan Terminal gagal:', error?.response?.data?.errors ?? error);
       } finally {
-        selected.outlet_confirmed_add_device = false;
-        setLoading(false);
+        setSending(false);
       }
     };
 
@@ -271,11 +271,13 @@ const ModalContents = {
                           Kembali
                         </Button>
                         {selected?.outlet_confirmed_add_device ? (
-                          <Button onClick={addTerminal} disabled={loading}>
-                            {loading ? (
-                              <LoaderCircleIcon className="size-4 animate-spin" />
-                            ) : null}
-                            {loading ? 'Memproses...' : 'Lanjutkan'}
+                          <Button
+                            onClick={() => {
+                              setStep(3);
+                              addTerminal();
+                            }}
+                          >
+                            Lanjutkan
                           </Button>
                         ) : (
                           <DialogClose asChild>
@@ -290,7 +292,22 @@ const ModalContents = {
                   <>
                     <div className="w-full">
                       <div className="flex flex-wrap">
-                        {selected?.outlet_confirmed_add_device ? (
+                        {sending ? (
+                          <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 p-5 h-full w-full flex flex-col items-center justify-center gap-3">
+                            <LoaderCircleIcon className="size-6 animate-spin" />
+                            <div className="font-semibold">Mengirim email username...</div>
+                            <div className="text-xs text-muted-foreground">Harap tunggu, proses sedang berjalan.</div>
+                          </div>
+                        ) : emailFailAttempts > 0 ? (
+                          <div className="border-2 border-dashed border-destructive/40 rounded bg-destructive/5 p-5 h-full w-full">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <div className="font-bold text-destructive">Gagal mengirim email username</div>
+                              <div className="text-sm text-muted-foreground text-center">
+                                Terjadi kesalahan saat memproses permintaan. Silakan coba lagi.
+                              </div>
+                            </div>
+                          </div>
+                        ) : selected?.outlet_confirmed_add_device ? (
                           <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 p-5 h-full w-full">
                             Username telah dikirimkan pada email berikut:
                             <br />
@@ -315,17 +332,16 @@ const ModalContents = {
                       </div>
 
                       <div className="flex pt-6 gap-3 justify-between">
-                        {selected?.outlet_confirmed_add_device &&
-                        emailFailAttempts > 0 ? (
+                        {emailFailAttempts > 0 ? (
                           <Button
                             variant="outline"
                             onClick={addTerminal}
-                            disabled={loading}
+                            disabled={sending}
                           >
-                            {loading ? (
+                            {sending ? (
                               <LoaderCircleIcon className="size-4 animate-spin" />
                             ) : null}
-                            {loading ? 'Mengirim...' : 'Kirim Lagi'}
+                            {sending ? 'Mengirim...' : 'Kirim Lagi'}
                           </Button>
                         ) : (
                           <span />
@@ -333,7 +349,7 @@ const ModalContents = {
 
                         {selected?.outlet_confirmed_add_device ? (
                           <DialogClose asChild>
-                            <Button variant="mono" disabled={loading || loading}>
+                            <Button variant="mono" disabled={sending}>
                               Tutup
                             </Button>
                           </DialogClose>
