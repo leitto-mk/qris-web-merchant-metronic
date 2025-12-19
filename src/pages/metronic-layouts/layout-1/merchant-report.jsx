@@ -26,7 +26,7 @@ export function MerchantReportPage() {
   const [history, setHistory] = useState([]);
   const [filters, setFilters] = useState({
     timestamprq: '',
-    amount: '',
+    amount: { operator: 'eq', value: '' },
     device: '',
     outlet: '',
     terminal: '',
@@ -37,27 +37,20 @@ export function MerchantReportPage() {
   });
 
   // Helpers
-  const pad = (n) => String(n).padStart(2, '0');
   const formatDateTimeLocal = (d) => {
     const m = moment(d);
     return m.isValid() ? m.format('YYYY-MM-DD HH:mm:ss') : '';
   };
 
-  const toInputLocal = (d) => {
-    // for input type="datetime-local" -> yyyy-MM-ddTHH:mm
-    const m = moment(d);
-    return m.isValid() ? m.format('YYYY-MM-DDTHH:mm') : '';
-  };
-
-  const fromInputLocal = (val) => {
-    // val like yyyy-MM-ddTHH:mm
-    if (!val) return new Date();
-    const m = moment(val);
-    return m.isValid() ? m.toDate() : new Date();
-  };
-
   const handleFilterChange = (columnId, value) => {
     setFilters((prev) => ({ ...prev, [columnId]: value }));
+  };
+
+  const handleAmountFilterChange = (key, value) => {
+    setFilters(prev => ({
+      ...prev,
+      amount: { ...prev.amount, [key]: value }
+    }));
   };
 
   // Quick range presets (relative to now, local time)
@@ -91,25 +84,93 @@ export function MerchantReportPage() {
 
   const maskAcc = (acc) => (acc ? String(acc).replace(/(\d{4})\d+(\d{4})/, '$1••••$2') : '-');
 
+  const uniqueDevices = useMemo(() => {
+    if (!history.length) return [];
+    const devices = new Set(history.map(item => item.device).filter(Boolean));
+    return ['All', ...Array.from(devices)];
+  }, [history]);
+
+  const uniqueOutlets = useMemo(() => {
+    if (!history.length) return [];
+    const outlets = new Set(history.map(item => item.outlet).filter(Boolean));
+    return ['All', ...Array.from(outlets)];
+  }, [history]);
+
+  const uniqueTerminals = useMemo(() => {
+    if (!history.length) return [];
+    const terminals = new Set(history.map(item => item.terminal).filter(Boolean));
+    return ['All', ...Array.from(terminals)];
+  }, [history]);
+
   const filteredHistory = useMemo(() => {
     if (!history.length) return [];
     return history
       .slice()
       .sort((a, b) => new Date(b.timestamprq) - new Date(a.timestamprq))
       .filter((item) => {
-        return (
-          new Date(item.timestamprq).toLocaleString('id-ID').toLowerCase().includes(filters.timestamprq.toLowerCase()) &&
-          formatIDR(item.amount).toLowerCase().includes(filters.amount.toLowerCase()) &&
-          String(item.device || '').toLowerCase().includes(filters.device.toLowerCase()) &&
-          String(item.outlet || '').toLowerCase().includes(filters.outlet.toLowerCase()) &&
-          String(item.terminal || '').toLowerCase().includes(filters.terminal.toLowerCase()) &&
-          String(item.rrn || '').toLowerCase().includes(filters.rrn.toLowerCase()) &&
-          String(item.fromname || '').toLowerCase().includes(filters.fromname.toLowerCase()) &&
-          String(item.fromacc || '').toLowerCase().includes(filters.fromacc.toLowerCase()) &&
-          String(item.toacc || '').toLowerCase().includes(filters.toacc.toLowerCase())
-        );
+        // Date filter
+        if (filters.timestamprq && !new Date(item.timestamprq).toLocaleString('id-ID').toLowerCase().includes(filters.timestamprq.toLowerCase())) {
+          return false;
+        }
+
+        // Amount filter
+        const amountValue = parseFloat(filters.amount.value);
+        if (!isNaN(amountValue)) {
+          const itemAmount = Number(item.amount);
+          if (filters.amount.operator === 'gt' && itemAmount <= amountValue) {
+            return false;
+          }
+          if (filters.amount.operator === 'lt' && itemAmount >= amountValue) {
+            return false;
+          }
+          if (filters.amount.operator === 'eq' && itemAmount !== amountValue) {
+            return false;
+          }
+        }
+
+        // Select filters
+        if (filters.device && filters.device !== 'All' && item.device !== filters.device) {
+          return false;
+        }
+        if (filters.outlet && filters.outlet !== 'All' && item.outlet !== filters.outlet) {
+          return false;
+        }
+        if (filters.terminal && filters.terminal !== 'All' && item.terminal !== filters.terminal) {
+          return false;
+        }
+
+        // Text filters
+        if (filters.rrn && !String(item.rrn || '').toLowerCase().includes(filters.rrn.toLowerCase())) {
+          return false;
+        }
+        if (filters.fromname && !String(item.fromname || '').toLowerCase().includes(filters.fromname.toLowerCase())) {
+          return false;
+        }
+        if (filters.fromacc && !String(item.fromacc || '').toLowerCase().includes(filters.fromacc.toLowerCase())) {
+          return false;
+        }
+        if (filters.toacc && !String(item.toacc || '').toLowerCase().includes(filters.toacc.toLowerCase())) {
+          return false;
+        }
+
+        return true;
       });
-  }, [history, filters, formatIDR]);
+  }, [history, filters]);
+
+  const filteredTotals = useMemo(() => {
+    const totalAmount = filteredHistory.reduce((sum, it) => sum + Number(it.amount || 0), 0);
+    const count = filteredHistory.length;
+    return { totalAmount, count };
+  }, [filteredHistory]);
+
+  const isFiltered = useMemo(() => {
+    return Object.values(filters).some(val => {
+      if (typeof val === 'string') return val.length > 0 && val !== 'All';
+      if (typeof val === 'object' && val !== null) return val.value.length > 0;
+      return false;
+    });
+  }, [filters]);
+
   // Derived metrics
   const totals = useMemo(() => {
     const totalAmount = history.reduce((sum, it) => sum + Number(it.amount || 0), 0);
@@ -224,7 +285,7 @@ export function MerchantReportPage() {
     link.setAttribute('href', url);
     const from = moment(dateFrom).format('YYYYMMDD');
     const to = moment(dateTo).format('YYYYMMDD');
-    link.setAttribute('download', `transaction_history_${from}_${to}.csv`);
+    link.setAttribute('download', `merchant_transaction_history_${from}_${to}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -385,7 +446,7 @@ export function MerchantReportPage() {
       <Card>
         <CardHeader className="py-3.5 flex flex-row items-center justify-between">
           <CardTitle>Daftar Transaksi</CardTitle>
-          <Button onClick={exportToCsv} variant="outline" size="sm" disabled={loadingHistory || filteredHistory.length === 0}>
+          <Button className={'bg-orange-400 hover:bg-orange-600 text-white'} onClick={exportToCsv} variant="outline" size="sm" disabled={loadingHistory || filteredHistory.length === 0}>
             <Download className="size-3.5" />
             <span>Export CSV</span>
           </Button>
@@ -410,10 +471,53 @@ export function MerchantReportPage() {
                 </tr>
                 <tr className="text-left">
                   <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.timestamprq} onChange={(e) => handleFilterChange('timestamprq', e.target.value)} /></td>
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.amount} onChange={(e) => handleFilterChange('amount', e.target.value)} /></td>
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.device} onChange={(e) => handleFilterChange('device', e.target.value)} /></td>
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.outlet} onChange={(e) => handleFilterChange('outlet', e.target.value)} /></td>
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.terminal} onChange={(e) => handleFilterChange('terminal', e.target.value)} /></td>
+                  <td className="py-2 pr-4">
+                    <div className="flex items-center gap-1">
+                      <select
+                        className="h-8 border border-input bg-background rounded-md px-2 text-xs"
+                        value={filters.amount.operator}
+                        onChange={(e) => handleAmountFilterChange('operator', e.target.value)}
+                      >
+                        <option value="eq">=</option>
+                        <option value="gt">&gt;</option>
+                        <option value="lt">&lt;</option>
+                      </select>
+                      <Input
+                        type="number"
+                        placeholder="Value..."
+                        className="h-8"
+                        value={filters.amount.value}
+                        onChange={(e) => handleAmountFilterChange('value', e.target.value)}
+                      />
+                    </div>
+                  </td>
+                  <td className="py-2 pr-4">
+                    <select
+                      className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                      value={filters.device}
+                      onChange={(e) => handleFilterChange('device', e.target.value)}
+                    >
+                      {uniqueDevices.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </td>
+                  <td className="py-2 pr-4">
+                    <select
+                      className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                      value={filters.outlet}
+                      onChange={(e) => handleFilterChange('outlet', e.target.value)}
+                    >
+                      {uniqueOutlets.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </td>
+                  <td className="py-2 pr-4">
+                    <select
+                      className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                      value={filters.terminal}
+                      onChange={(e) => handleFilterChange('terminal', e.target.value)}
+                    >
+                      {uniqueTerminals.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </td>
                   <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.rrn} onChange={(e) => handleFilterChange('rrn', e.target.value)} /></td>
                   <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromname} onChange={(e) => handleFilterChange('fromname', e.target.value)} /></td>
                   <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromacc} onChange={(e) => handleFilterChange('fromacc', e.target.value)} /></td>
@@ -435,6 +539,15 @@ export function MerchantReportPage() {
                   </tr>
                 ))}
                 </tbody>
+                {isFiltered && (
+                  <tfoot>
+                  <tr className="border-t border-dashed">
+                    <td className="py-2 pr-4 font-bold">Total Filtered</td>
+                    <td className="py-2 pr-4 text-right font-mono font-bold">{formatIDR(filteredTotals.totalAmount)}</td>
+                    <td colSpan="7" className="py-2 pr-4 text-right font-bold">{filteredTotals.count} records</td>
+                  </tr>
+                  </tfoot>
+                )}
               </table>
               {filteredHistory.length === 0 && (
                 <div className="text-sm text-muted-foreground text-center py-4">Tidak ada data yang cocok dengan filter.</div>
