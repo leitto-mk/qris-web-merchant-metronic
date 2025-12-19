@@ -1,11 +1,13 @@
 import { useAppData } from '@/context/AppDataContext.jsx';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import moment from 'moment';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge.jsx';
+import { Input } from '@/components/ui/input.jsx';
+import { Download } from 'lucide-react';
 import * as Recharts from 'recharts';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart.jsx';
 import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
@@ -22,6 +24,17 @@ export function MerchantReportPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState('');
   const [history, setHistory] = useState([]);
+  const [filters, setFilters] = useState({
+    timestamprq: '',
+    amount: '',
+    device: '',
+    outlet: '',
+    terminal: '',
+    rrn: '',
+    fromname: '',
+    fromacc: '',
+    toacc: '',
+  });
 
   // Helpers
   const pad = (n) => String(n).padStart(2, '0');
@@ -43,6 +56,10 @@ export function MerchantReportPage() {
     return m.isValid() ? m.toDate() : new Date();
   };
 
+  const handleFilterChange = (columnId, value) => {
+    setFilters((prev) => ({ ...prev, [columnId]: value }));
+  };
+
   // Quick range presets (relative to now, local time)
   const nowLocal = () => moment().toDate();
   const minusDays = (base, days) => moment(base).subtract(days, 'days').toDate();
@@ -62,15 +79,37 @@ export function MerchantReportPage() {
     setDateTo(to);
   };
 
-  const formatIDR = (n) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      maximumFractionDigits: 0,
-    }).format(Number(n || 0));
+  const formatIDR = useCallback(
+    (n) =>
+      new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+      }).format(Number(n || 0)),
+    []
+  );
 
   const maskAcc = (acc) => (acc ? String(acc).replace(/(\d{4})\d+(\d{4})/, '$1••••$2') : '-');
 
+  const filteredHistory = useMemo(() => {
+    if (!history.length) return [];
+    return history
+      .slice()
+      .sort((a, b) => new Date(b.timestamprq) - new Date(a.timestamprq))
+      .filter((item) => {
+        return (
+          new Date(item.timestamprq).toLocaleString('id-ID').toLowerCase().includes(filters.timestamprq.toLowerCase()) &&
+          formatIDR(item.amount).toLowerCase().includes(filters.amount.toLowerCase()) &&
+          String(item.device || '').toLowerCase().includes(filters.device.toLowerCase()) &&
+          String(item.outlet || '').toLowerCase().includes(filters.outlet.toLowerCase()) &&
+          String(item.terminal || '').toLowerCase().includes(filters.terminal.toLowerCase()) &&
+          String(item.rrn || '').toLowerCase().includes(filters.rrn.toLowerCase()) &&
+          String(item.fromname || '').toLowerCase().includes(filters.fromname.toLowerCase()) &&
+          String(item.fromacc || '').toLowerCase().includes(filters.fromacc.toLowerCase()) &&
+          String(item.toacc || '').toLowerCase().includes(filters.toacc.toLowerCase())
+        );
+      });
+  }, [history, filters, formatIDR]);
   // Derived metrics
   const totals = useMemo(() => {
     const totalAmount = history.reduce((sum, it) => sum + Number(it.amount || 0), 0);
@@ -156,6 +195,41 @@ export function MerchantReportPage() {
     } finally {
       setLoadingHistory(false);
     }
+  };
+
+  const exportToCsv = () => {
+    if (filteredHistory.length === 0) return;
+
+    const headers = [
+      'Tanggal', 'Amount', 'Device', 'Outlet', 'Terminal', 'RRN', 'From Name', 'From Acc', 'To Acc'
+    ];
+
+    // Using filtered and sorted data
+    const rows = filteredHistory.map(item => [
+      `"${new Date(item.timestamprq).toLocaleString('id-ID')}"`,
+      item.amount,
+      `"${item.device || ''}"`,
+      `"${item.outlet || ''}"`,
+      `"${item.terminal || ''}"`,
+      `"${item.rrn || ''}"`,
+      `"${item.fromname || ''}"`,
+      `"${item.fromacc || ''}"`,
+      `"${item.toacc || ''}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const from = moment(dateFrom).format('YYYYMMDD');
+    const to = moment(dateTo).format('YYYYMMDD');
+    link.setAttribute('download', `transaction_history_${from}_${to}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleTransactionHistoryMock = () => {
@@ -309,15 +383,20 @@ export function MerchantReportPage() {
 
       {/* Table */}
       <Card>
-        <CardHeader className="py-3.5">
+        <CardHeader className="py-3.5 flex flex-row items-center justify-between">
           <CardTitle>Daftar Transaksi</CardTitle>
+          <Button onClick={exportToCsv} variant="outline" size="sm" disabled={loadingHistory || filteredHistory.length === 0}>
+            <Download className="size-3.5" />
+            <span>Export CSV</span>
+          </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {history.length === 0 ? (
             <div className="text-sm text-muted-foreground">Belum ada data. Silakan pilih preset rentang tanggal lalu klik Ambil Report.</div>
           ) : (
-            <table className="min-w-full text-sm">
-              <thead>
+            <>
+              <table className="min-w-full text-sm">
+                <thead>
                 <tr className="text-left border-b border-dashed">
                   <th className="py-2 pr-4">Tanggal</th>
                   <th className="py-2 pr-4 text-right">Amount</th>
@@ -329,26 +408,38 @@ export function MerchantReportPage() {
                   <th className="py-2 pr-4">From Acc</th>
                   <th className="py-2 pr-4">To Acc</th>
                 </tr>
-              </thead>
-              <tbody>
-                {history
-                  .slice()
-                  .sort((a, b) => new Date(b.timestamprq) - new Date(a.timestamprq))
-                  .map((it, idx) => (
-                    <tr key={idx} className="border-b border-dashed last:border-0">
-                      <td className="py-2 pr-4 whitespace-nowrap">{new Date(it.timestamprq).toLocaleString()}</td>
-                      <td className="py-2 pr-4 text-right font-mono">{formatIDR(it.amount)}</td>
-                      <td className="py-2 pr-4">{it.device}</td>
-                      <td className="py-2 pr-4">{it.outlet}</td>
-                      <td className="py-2 pr-4">{it.terminal}</td>
-                      <td className="py-2 pr-4 font-mono">{it.rrn}</td>
-                      <td className="py-2 pr-4">{it.fromname}</td>
-                      <td className="py-2 pr-4 font-mono">{maskAcc(it.fromacc)}</td>
-                      <td className="py-2 pr-4 font-mono">{maskAcc(it.toacc)}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                <tr className="text-left">
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.timestamprq} onChange={(e) => handleFilterChange('timestamprq', e.target.value)} /></td>
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.amount} onChange={(e) => handleFilterChange('amount', e.target.value)} /></td>
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.device} onChange={(e) => handleFilterChange('device', e.target.value)} /></td>
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.outlet} onChange={(e) => handleFilterChange('outlet', e.target.value)} /></td>
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.terminal} onChange={(e) => handleFilterChange('terminal', e.target.value)} /></td>
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.rrn} onChange={(e) => handleFilterChange('rrn', e.target.value)} /></td>
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromname} onChange={(e) => handleFilterChange('fromname', e.target.value)} /></td>
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromacc} onChange={(e) => handleFilterChange('fromacc', e.target.value)} /></td>
+                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.toacc} onChange={(e) => handleFilterChange('toacc', e.target.value)} /></td>
+                </tr>
+                </thead>
+                <tbody>
+                {filteredHistory.map((it, idx) => (
+                  <tr key={idx} className="border-b border-dashed last:border-0">
+                    <td className="py-2 pr-4 whitespace-nowrap">{new Date(it.timestamprq).toLocaleString('id-ID')}</td>
+                    <td className="py-2 pr-4 text-right font-mono">{formatIDR(it.amount)}</td>
+                    <td className="py-2 pr-4">{it.device}</td>
+                    <td className="py-2 pr-4">{it.outlet}</td>
+                    <td className="py-2 pr-4">{it.terminal}</td>
+                    <td className="py-2 pr-4 font-mono">{it.rrn}</td>
+                    <td className="py-2 pr-4">{it.fromname}</td>
+                    <td className="py-2 pr-4 font-mono">{maskAcc(it.fromacc)}</td>
+                    <td className="py-2 pr-4 font-mono">{maskAcc(it.toacc)}</td>
+                  </tr>
+                ))}
+                </tbody>
+              </table>
+              {filteredHistory.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-4">Tidak ada data yang cocok dengan filter.</div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
