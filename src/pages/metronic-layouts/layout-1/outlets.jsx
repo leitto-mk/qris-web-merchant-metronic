@@ -1,24 +1,82 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppData } from '@/context/AppDataContext.jsx';
-import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
-import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X } from 'lucide-react';
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+import {
+  Check,
+  EllipsisVertical,
+  Eye,
+  EyeClosed,
+  Key,
+  LoaderCircleIcon,
+  UserRoundIcon,
+  UserRoundMinus,
+  UserRoundPen,
+  UserRoundPlusIcon,
+  X,
+} from 'lucide-react';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardHeading, CardTable, CardTitle } from '@/components/ui/card.jsx';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardHeading,
+  CardTable,
+  CardTitle,
+} from '@/components/ui/card.jsx';
 import { DataGridPagination } from '@/components/ui/data-grid-pagination.jsx';
 import { DataGridTable } from '@/components/ui/data-grid-table.jsx';
 import { DataGrid } from '@/components/ui/data-grid.jsx';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.jsx';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog.jsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area.jsx';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
-import { Stepper, StepperContent, StepperIndicator, StepperItem, StepperNav, StepperPanel, StepperSeparator, StepperTitle, StepperTrigger } from '@/components/ui/stepper.jsx';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select.jsx';
+import {
+  Stepper,
+  StepperContent,
+  StepperIndicator,
+  StepperItem,
+  StepperNav,
+  StepperPanel,
+  StepperSeparator,
+  StepperTitle,
+  StepperTrigger,
+} from '@/components/ui/stepper.jsx';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const ModalContents = {
   AddDeviceModalContent: ({ selected, closeModal }) => {
@@ -33,7 +91,7 @@ const ModalContents = {
       Number(selected?.email_fail_attempts ?? 0)
     );
 
-    const confirmPassword = async () => {
+    const confirmPassword = useCallback(async () => {
       try {
         setLoading(true);
         await AuthService.confirmPassword(confirmPwd);
@@ -45,34 +103,44 @@ const ModalContents = {
         if (selected) {
           selected.outlet_confirmed_add_device = false;
         }
-        console.error('Konfirmasi password gagal:', error?.response?.data?.errors ?? error);
+        console.error(
+          'Konfirmasi password gagal:',
+          error?.response?.data?.errors ?? error
+        );
       } finally {
         setLoading(false);
       }
-    };
+    }, [confirmPwd, selected]);
 
-    const addTerminal = async () => {
-      try {
-        setSending(true);
-        const session = AuthService.retrieveSession();
-        if (!session || !session.kd_user) {
-          throw new Error('Sesi pengguna tidak tersedia. Silakan login kembali.');
-        }
-
-        await axiosInstance().post('/terminal/create', {
-          kdUser: session.kd_user,
-          outlet: selected.XID
-        });
-        // Invalidate outlets query so the UI refreshes with the latest outlet terminals
-        // Close modal after successful request
-        closeModal();
-      } catch (error) {
-        setEmailFailAttempts(emailFailAttempts+1);
-        console.error('Penambahan Terminal gagal:', error?.response?.data?.errors ?? error);
-      } finally {
+    const addTerminal = useCallback(() => {
+      setSending(true);
+      const session = AuthService.retrieveSession();
+      if (!session || !session.kd_user) {
+        console.error('Sesi pengguna tidak tersedia. Silakan login kembali.');
         setSending(false);
+        return;
       }
-    };
+
+      axiosInstance()
+        .post('/terminal/create', {
+          kdUser: session.kd_user,
+          outlet: selected.XID,
+        })
+        .then(() => {
+          queryClient.invalidateQueries('outlets');
+          closeModal();
+        })
+        .catch((error) => {
+          setEmailFailAttempts((prev) => prev + 1);
+          console.error(
+            'Penambahan Terminal gagal:',
+            error?.response?.data?.errors ?? error
+          );
+        })
+        .finally(() => {
+          setSending(false);
+        });
+    }, [selected, closeModal, queryClient]);
 
     return (
       <>
@@ -216,7 +284,11 @@ const ModalContents = {
                                 value={confirmPwd}
                                 onChange={(e) => setConfirmPwd(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && !loading && confirmPwd) {
+                                  if (
+                                    e.key === 'Enter' &&
+                                    !loading &&
+                                    confirmPwd
+                                  ) {
                                     e.preventDefault();
                                     confirmPassword();
                                   }
@@ -237,8 +309,9 @@ const ModalContents = {
                             >
                               {loading ? (
                                 <LoaderCircleIcon className="size-4 animate-spin" />
-                              ) : null}
-                              {loading ? 'Memproses...' : 'Konfirmasi'}
+                              ) : (
+                                'Konfirmasi'
+                              )}
                             </Button>
                           </div>
                         </div>
@@ -295,15 +368,22 @@ const ModalContents = {
                         {sending ? (
                           <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 p-5 h-full w-full flex flex-col items-center justify-center gap-3">
                             <LoaderCircleIcon className="size-6 animate-spin" />
-                            <div className="font-semibold">Mengirim email username...</div>
-                            <div className="text-xs text-muted-foreground">Harap tunggu, proses sedang berjalan.</div>
+                            <div className="font-semibold">
+                              Mengirim email username...
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Harap tunggu, proses sedang berjalan.
+                            </div>
                           </div>
                         ) : emailFailAttempts > 0 ? (
                           <div className="border-2 border-dashed border-destructive/40 rounded bg-destructive/5 p-5 h-full w-full">
                             <div className="flex flex-col items-center justify-center gap-2">
-                              <div className="font-bold text-destructive">Gagal mengirim email username</div>
+                              <div className="font-bold text-destructive">
+                                Gagal mengirim email username
+                              </div>
                               <div className="text-sm text-muted-foreground text-center">
-                                Terjadi kesalahan saat memproses permintaan. Silakan coba lagi.
+                                Terjadi kesalahan saat memproses permintaan.
+                                Silakan coba lagi.
                               </div>
                             </div>
                           </div>
@@ -340,8 +420,9 @@ const ModalContents = {
                           >
                             {sending ? (
                               <LoaderCircleIcon className="size-4 animate-spin" />
-                            ) : null}
-                            {sending ? 'Mengirim...' : 'Kirim Lagi'}
+                            ) : (
+                              'Kirim Lagi'
+                            )}
                           </Button>
                         ) : (
                           <span />
@@ -373,7 +454,7 @@ const ModalContents = {
       (item) => item?.TerminalID !== 'A01'
     );
 
-    const resetDeviceTerminal = async () => {
+    const resetDeviceTerminal = useCallback(async () => {
       try {
         setLoading(true);
 
@@ -381,7 +462,9 @@ const ModalContents = {
 
         const session = AuthService.retrieveSession();
         if (!session || !session.kd_user) {
-          throw new Error('Sesi pengguna tidak tersedia. Silakan login kembali.');
+          throw new Error(
+            'Sesi pengguna tidak tersedia. Silakan login kembali.'
+          );
         }
 
         await axiosInstance().post('/terminal/reset/device', {
@@ -392,11 +475,14 @@ const ModalContents = {
         // Close modal after successful request
         closeModal();
       } catch (error) {
-        console.error('Gagal mereset perangkat:', error?.response?.data?.errors ?? error);
+        console.error(
+          'Gagal mereset perangkat:',
+          error?.response?.data?.errors ?? error
+        );
       } finally {
         setLoading(false);
       }
-    };
+    }, [resetDeviceXID, closeModal]);
 
     return (
       <div className="flex flex-col gap-5">
@@ -413,7 +499,9 @@ const ModalContents = {
               <SelectContent className="w-full min-w-[16rem]">
                 {terminalOptions.map((item) => (
                   <SelectItem key={item.XID} value={item.XID}>
-                    {`${(item.kd_user || '').toUpperCase()} [${item.TerminalID}]`}
+                    {`${(item.kd_user || '').toUpperCase()} [${
+                      item.TerminalID
+                    }]`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -425,9 +513,15 @@ const ModalContents = {
           <DialogClose asChild>
             <Button variant="outline">Tutup</Button>
           </DialogClose>
-          <Button onClick={resetDeviceTerminal} disabled={loading || !resetDeviceXID}>
-            {loading ? <LoaderCircleIcon className="size-4 animate-spin" /> : null}
-            {loading ? 'Memproses...' : 'Reset Perangkat'}
+          <Button
+            onClick={resetDeviceTerminal}
+            disabled={loading || !resetDeviceXID}
+          >
+            {loading ? (
+              <LoaderCircleIcon className="size-4 animate-spin" />
+            ) : (
+              'Reset Perangkat'
+            )}
           </Button>
         </div>
       </div>
@@ -441,14 +535,16 @@ const ModalContents = {
       (item) => item?.TerminalID !== 'A01'
     );
 
-    const resetPasswordTerminal = async () => {
+    const resetPasswordTerminal = useCallback(async () => {
       try {
         setLoading(true);
         if (!merchantUser) throw new Error('User Merchant harus dipilih');
 
         const session = AuthService.retrieveSession();
         if (!session || !session.kd_user) {
-          throw new Error('Sesi pengguna tidak tersedia. Silakan login kembali.');
+          throw new Error(
+            'Sesi pengguna tidak tersedia. Silakan login kembali.'
+          );
         }
 
         await axiosInstance().post('/terminal/reset/password', {
@@ -459,11 +555,14 @@ const ModalContents = {
         // Close modal after successful request
         closeModal();
       } catch (error) {
-        console.error('Gagal reset password:', error?.response?.data?.errors ?? error);
+        console.error(
+          'Gagal reset password:',
+          error?.response?.data?.errors ?? error
+        );
       } finally {
         setLoading(false);
       }
-    };
+    }, [merchantUser, closeModal]);
 
     return (
       <div className="flex flex-col gap-5">
@@ -479,7 +578,11 @@ const ModalContents = {
               </SelectTrigger>
               <SelectContent className="w-full min-w-[16rem]">
                 {merchantUserOptions.map((item) => (
-                  <SelectItem key={item.kd_user} value={item.kd_user} className="uppercase">
+                  <SelectItem
+                    key={item.kd_user}
+                    value={item.kd_user}
+                    className="uppercase"
+                  >
                     {item.kd_user}
                   </SelectItem>
                 ))}
@@ -492,15 +595,21 @@ const ModalContents = {
           <DialogClose asChild>
             <Button variant="outline">Tutup</Button>
           </DialogClose>
-          <Button onClick={resetPasswordTerminal} disabled={loading || !merchantUser}>
-            {loading ? <LoaderCircleIcon className="size-4 animate-spin" /> : null}
-            {loading ? 'Memproses...' : 'Reset Password'}
+          <Button
+            onClick={resetPasswordTerminal}
+            disabled={loading || !merchantUser}
+          >
+            {loading ? (
+              <LoaderCircleIcon className="size-4 animate-spin" />
+            ) : (
+              'Reset Password'
+            )}
           </Button>
         </div>
       </div>
     );
-}
-}
+  },
+};
 
 function buildActionsMenu(row, openModal) {
   return (
@@ -511,49 +620,72 @@ function buildActionsMenu(row, openModal) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-64">
-        <DropdownMenuItem className="cursor-pointer" onClick={row.getToggleExpandedHandler()}>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={row.getToggleExpandedHandler()}
+        >
           {row.getIsExpanded() ? <X /> : <UserRoundIcon />}
-          <span>{row.getIsExpanded() ? 'Tutup Details' : 'Details' }</span>
+          <span>{row.getIsExpanded() ? 'Tutup Details' : 'Details'}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer" onClick={() => openModal('AddDeviceModalContent', row)}>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => openModal('AddDeviceModalContent', row)}
+        >
           <UserRoundPlusIcon />
           <span>Tambah Perangkat</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer" onClick={() => openModal('ResetTerminalModalContent', row)}>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => openModal('ResetTerminalModalContent', row)}
+        >
           <UserRoundPen />
           <span>Reset Perangkat</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer" onClick={() => openModal('ResetPasswordTerminalModalContent', row)}>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => openModal('ResetPasswordTerminalModalContent', row)}
+        >
           <UserRoundMinus />
           <span>Reset User Password</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 function buildExpandedDetails(merchant, data) {
   return (
     <div className="flex flex-col 2xl:flex-row gap-10 m-5">
-
       {/* QR IMAGE */}
       <div className="flex flex-col gap-1">
         <div className="group/overlay relative">
           <div className="absolute inset-0 rounded-xl bg-black/50 flex items-center justify-center opacity-0 group-hover/overlay:opacity-100 transition-opacity duration-300">
-            <Button className="text-xs md:text-sm xl:text-base" variant="outline" onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}>Print / Download</Button>
+            <Button
+              className="text-xs md:text-sm xl:text-base"
+              variant="outline"
+              onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}
+            >
+              Print / Download
+            </Button>
           </div>
-          <img src={data?.qris?.qr_base64} aria-label="QRIS Image" className="w-[13rem] md:w-[15rem] xl:w-[18rem] 2xl:w-[19rem] object-contain rounded-xl" alt="Qris-Image" />
+          <img
+            src={data?.qris?.qr_base64}
+            aria-label="QRIS Image"
+            className="w-[13rem] md:w-[15rem] xl:w-[18rem] 2xl:w-[19rem] object-contain rounded-xl"
+            alt="Qris-Image"
+          />
         </div>
       </div>
 
       {/* RIGHT SECTION */}
       <div className="flex flex-col gap-5">
-
         {/* OUTLET INFOS */}
         <div className="flex flex-col 2xl:flex-row gap-5">
-
           {/* LEFT CARD */}
-          <Card className="inline-block w-[50rem] 2xl:w-[35rem]" variant="accent">
+          <Card
+            className="inline-block w-[50rem] 2xl:w-[35rem]"
+            variant="accent"
+          >
             <CardHeader>
               <CardHeading>
                 <div className="font-bold uppercase">Outlet Info</div>
@@ -574,7 +706,11 @@ function buildExpandedDetails(merchant, data) {
               </div>
               <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                 <span>Tipe Usaha</span>
-                <span>{data.tipe_usaha === "INDIVIDU" ? "INDIVIDU" : "BADAN USAHA"}</span>
+                <span>
+                  {data.tipe_usaha === 'INDIVIDU'
+                    ? 'INDIVIDU'
+                    : 'BADAN USAHA'}
+                </span>
               </div>
               {data.tipe_usaha === 'BADAN_USAHA' && (
                 <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
@@ -582,18 +718,20 @@ function buildExpandedDetails(merchant, data) {
                   <span>{data.nama_institusi || '-'}</span>
                 </div>
               )}
-              {data.tipe_usaha === 'BADAN_USAHA' && data.kategori === 'PEMDA' && (
-                <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                  <span>PEMDA</span>
-                  <span>{data.pemda || '-'}</span>
-                </div>
-              )}
-              {data.tipe_usaha === 'BADAN_USAHA' && data.kategori === 'PEMDA' && (
-                <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                  <span>DINAS</span>
-                  <span>{data.dinas || '-'}</span>
-                </div>
-              )}
+              {data.tipe_usaha === 'BADAN_USAHA' &&
+                data.kategori === 'PEMDA' && (
+                  <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
+                    <span>PEMDA</span>
+                    <span>{data.pemda || '-'}</span>
+                  </div>
+                )}
+              {data.tipe_usaha === 'BADAN_USAHA' &&
+                data.kategori === 'PEMDA' && (
+                  <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
+                    <span>DINAS</span>
+                    <span>{data.dinas || '-'}</span>
+                  </div>
+                )}
               <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                 <span>Kategori</span>
                 <span>{data.kategori || '-'}</span>
@@ -622,7 +760,10 @@ function buildExpandedDetails(merchant, data) {
           </Card>
 
           {/* RIGHT CARD */}
-          <Card className="inline-block w-[50rem] 2xl:w-[35rem]" variant="accent">
+          <Card
+            className="inline-block w-[50rem] 2xl:w-[35rem]"
+            variant="accent"
+          >
             <CardHeader>
               <CardHeading>
                 <div className="font-bold uppercase">Informasi Pemilik</div>
@@ -631,15 +772,17 @@ function buildExpandedDetails(merchant, data) {
             <CardContent>
               <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                 <span>Alamat</span>
-                <span label="Alamat">{`${data.outlatAddress}, ${data.kota} ${data.kdPost}`}</span>
+                <span
+                  label="Alamat"
+                >{`${data.outlatAddress}, ${data.kota} ${data.kdPost}`}</span>
               </div>
               <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                 <span>KTP</span>
-                <span label="KTP">{data.ktp ?? "-"}</span>
+                <span label="KTP">{data.ktp ?? '-'}</span>
               </div>
               <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                 <span>NPWP</span>
-                <span>{data.npwp ?? "-"}</span>
+                <span>{data.npwp ?? '-'}</span>
               </div>
               <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                 <span>No. HP</span>
@@ -655,7 +798,7 @@ function buildExpandedDetails(merchant, data) {
               </div>
               <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                 <span>No. Legalitas Usaha</span>
-                <span>{data.no_legalitas_usaha ?? "-"}</span>
+                <span>{data.no_legalitas_usaha ?? '-'}</span>
               </div>
               <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                 <span>No. Rekening</span>
@@ -682,7 +825,13 @@ function buildExpandedDetails(merchant, data) {
 
               <div className="flex flex-wrap gap-2">
                 {data.terminal.map((terminal) => (
-                  <Badge value={terminal.TerminalID} variant="secondary" size="lg">{terminal.TerminalID}</Badge>
+                  <Badge
+                    value={terminal.TerminalID}
+                    variant="secondary"
+                    size="lg"
+                  >
+                    {terminal.TerminalID}
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -693,9 +842,15 @@ function buildExpandedDetails(merchant, data) {
 
               <div className="flex flex-wrap gap-2">
                 {data.terminal
-                  .filter((t) => t.TerminalID !== "A01")
+                  .filter((t) => t.TerminalID !== 'A01')
                   .map((t) => (
-                    <Badge className="uppercase" variant="secondary" size="lg">{t.kd_user}</Badge>
+                    <Badge
+                      className="uppercase"
+                      variant="secondary"
+                      size="lg"
+                    >
+                      {t.kd_user}
+                    </Badge>
                   ))}
               </div>
             </div>
@@ -721,44 +876,51 @@ export function OutletPage() {
   const [currentModalKey, setCurrentModalKey] = useState(null);
 
   // Modal metadata for dynamic titles and descriptions
-  const modalMeta = useMemo(() => ({
-    AddDeviceModalContent: {
-      title: 'Tambah Perangkat',
-      description: 'Ikuti langkah untuk menambahkan perangkat baru pada outlet terpilih.',
-    },
-    ResetTerminalModalContent: {
-      title: 'Reset Perangkat',
-      description: 'Pilih terminal perangkat yang akan direset.',
-    },
-    ResetPasswordTerminalModalContent: {
-      title: 'Reset User Password',
-      description: 'Pilih Merchant User untuk melakukan reset password.',
-    },
-  }), []);
+  const modalMeta = useMemo(
+    () => ({
+      AddDeviceModalContent: {
+        title: 'Tambah Perangkat',
+        description:
+          'Ikuti langkah untuk menambahkan perangkat baru pada outlet terpilih.',
+      },
+      ResetTerminalModalContent: {
+        title: 'Reset Perangkat',
+        description: 'Pilih terminal perangkat yang akan direset.',
+      },
+      ResetPasswordTerminalModalContent: {
+        title: 'Reset User Password',
+        description: 'Pilih Merchant User untuk melakukan reset password.',
+      },
+    }),
+    []
+  );
 
-  const { title: currentDialogTitle, description: currentDialogDescription } = useMemo(() => {
-    const meta = currentModalKey ? modalMeta[currentModalKey] : null;
-    const outletName = selectedRow?.outlatName || selectedRow?.namaOutlet;
-    const titleWithContext = meta?.title
-      ? `${meta.title}${outletName ? ` • ${String(outletName).toUpperCase()}` : ''}`
-      : '';
-    return {
-      title: titleWithContext,
-      description: meta?.description ?? '',
-    };
-  }, [currentModalKey, selectedRow, modalMeta]);
+  const { title: currentDialogTitle, description: currentDialogDescription } =
+    useMemo(() => {
+      const meta = currentModalKey ? modalMeta[currentModalKey] : null;
+      const outletName = selectedRow?.outlatName || selectedRow?.namaOutlet;
+      const titleWithContext = meta?.title
+        ? `${meta.title}${
+            outletName ? ` • ${String(outletName).toUpperCase()}` : ''
+          }`
+        : '';
+      return {
+        title: titleWithContext,
+        description: meta?.description ?? '',
+      };
+    }, [currentModalKey, selectedRow, modalMeta]);
 
-  const openModal = (key, row) => {
+  const openModal = useCallback((key, row) => {
     setSelectedRow(row?.original ?? row);
     setCurrentModalKey(key);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedRow(null);
     setCurrentModalKey(null);
-  };
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -864,7 +1026,9 @@ export function OutletPage() {
         cell: (data) => (
           <span className="uppercase">
             <Badge
-              variant={`${data.getValue().length > 0 ? 'success' : 'secondary'}`}
+              variant={`${
+                data.getValue().length > 0 ? 'success' : 'secondary'
+              }`}
             >
               {data.getValue().length || 0}
             </Badge>
@@ -877,7 +1041,7 @@ export function OutletPage() {
       },
       {
         header: 'Actions',
-        cell: ({row}) => {
+        cell: ({ row }) => {
           return row.getCanExpand() ? buildActionsMenu(row, openModal) : null;
         },
         // Make the Actions column fit its content (no wrapping and minimal width)
@@ -888,7 +1052,7 @@ export function OutletPage() {
         },
       },
     ],
-    [outlets],
+    [outlets, openModal, merchant]
   );
 
   const table = useReactTable({
@@ -955,12 +1119,11 @@ export function OutletPage() {
           <DialogTitle>{currentDialogTitle}</DialogTitle>
           <DialogDescription>{currentDialogDescription}</DialogDescription>
           {(() => {
-            const ActiveModal = currentModalKey ? ModalContents[currentModalKey] : null;
+            const ActiveModal = currentModalKey
+              ? ModalContents[currentModalKey]
+              : null;
             return ActiveModal ? (
-              <ActiveModal
-                selected={selectedRow}
-                closeModal={closeModal}
-              />
+              <ActiveModal selected={selectedRow} closeModal={closeModal} />
             ) : null;
           })()}
         </DialogContent>

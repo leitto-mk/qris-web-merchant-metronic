@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import QRCode from 'react-qr-code';
 
 // Public assets (placed under /public). Use absolute paths so they work in a popup window, too.
@@ -28,7 +28,7 @@ export function TerminalQRDisplay() {
     const v = payment?.amount || 0;
     try {
       return new Intl.NumberFormat('id-ID').format(v);
-    } catch (_) {
+    } catch {
       return String(v);
     }
   }, [payment?.amount]);
@@ -47,7 +47,7 @@ export function TerminalQRDisplay() {
     }
   };
 
-  const startNewCountdown = (expiresInMs) => {
+  const startNewCountdown = useCallback((expiresInMs) => {
     clearTimer();
     if (!expiresInMs || expiresInMs <= 0) {
       setFormattedTime('00:00');
@@ -73,24 +73,27 @@ export function TerminalQRDisplay() {
     // Start immediately and then each second
     tick();
     intervalRef.current = setInterval(tick, 1000);
-  };
+  }, []);
 
   // Unified handler for incoming payloads (BroadcastChannel or storage fallback)
-  const handleIncoming = (raw) => {
-    const data = raw || {};
-    setPayment({
-      display: !!data.display,
-      currentTime: data.currentTime ?? null,
-      outlet: data.outlet ?? null,
-      qr: data.qr ?? null,
-      nmid: data.nmid ?? null,
-      amount: Number(data.amount) || 0,
-      expiresInMs: Number(data.expiresInMs) || 0,
-    });
-    if (data.display) {
-      startNewCountdown(Number(data.expiresInMs) || 0);
-    }
-  };
+  const handleIncoming = useCallback(
+    (raw) => {
+      const data = raw || {};
+      setPayment({
+        display: !!data.display,
+        currentTime: data.currentTime ?? null,
+        outlet: data.outlet ?? null,
+        qr: data.qr ?? null,
+        nmid: data.nmid ?? null,
+        amount: Number(data.amount) || 0,
+        expiresInMs: Number(data.expiresInMs) || 0,
+      });
+      if (data.display) {
+        startNewCountdown(Number(data.expiresInMs) || 0);
+      }
+    },
+    [startNewCountdown]
+  );
 
   // Listen for broadcast messages from the terminal page
   useEffect(() => {
@@ -111,7 +114,7 @@ export function TerminalQRDisplay() {
       try {
         const parsed = JSON.parse(e.newValue);
         handleIncoming(parsed);
-      } catch (_) {
+      } catch {
         // ignore parse errors
       }
     };
@@ -120,12 +123,15 @@ export function TerminalQRDisplay() {
     return () => {
       clearTimer();
       if (channel) {
-        try { channel.close(); } catch (_) {}
+        try {
+          channel.close();
+        } catch {
+          /* ignore */
+        }
       }
       window.removeEventListener('storage', onStorage);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [handleIncoming]);
 
   // Reset fields when display is turned off (to mimic Vue watcher behavior)
   useEffect(() => {
@@ -141,7 +147,6 @@ export function TerminalQRDisplay() {
         expiresInMs: 0,
       }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payment.display]);
 
   // Build a QR presentation. Prefer native data if provided as base64; otherwise, use an on-the-fly QR image service.
@@ -165,14 +170,12 @@ export function TerminalQRDisplay() {
           <div className="flex flex-row mb-5">
             <div className="text-center basis-1/12">
               <img src={QRIS_LOGO} alt="qris-logo" />
-              <div className="inline-block bg-white">
-                {qrElement}
-              </div>
+              <div className="inline-block bg-white">{qrElement}</div>
               <div className="text-md text-gray-900 mt-2">NMID: {payment.nmid}</div>
             </div>
             <div className="flex flex-col text-center justify-center basis-11/12">
               <p className="text-xl font-bold text-gray-500">Pembayaran</p>
-              <p className="text-4xl font-bold text-gray-800 mb-3">Rp. {new Intl.NumberFormat('id-ID').format(payment?.amount || 0)}</p>
+              <p className="text-4xl font-bold text-gray-800 mb-3">Rp. {formattedAmount}</p>
               <div className="flex flex-row justify-center gap-1">
                 <i className="text-xl pi pi-clock text-gray-800"></i>
                 <p className={`text-xl font-bold ${formattedTimeSeverity}`}>{formattedTime}</p>

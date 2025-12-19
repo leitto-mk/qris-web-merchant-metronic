@@ -11,7 +11,7 @@ import {
 import { useAppData } from '@/context/AppDataContext.jsx';
 import { Card, CardContent, CardHeader, CardHeading } from '@/components/ui/card.jsx';
 import ImagePrintService from '@/services/ImagePrintService.js';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import QRCode from 'react-qr-code';
 import { LoaderCircleIcon, RotateCcw, X } from 'lucide-react';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
@@ -24,7 +24,6 @@ export function Layout32Page() {
   const { merchant, outlets, loading: appLoading } = useAppData();
 
   const [tab, setTab] = useState('outlet');
-  const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(null);
   const [formattedTime, setFormattedTime] = useState('');
   const [generate, setGenerate] = useState(false);
@@ -35,7 +34,7 @@ export function Layout32Page() {
     nmid: null,
     expiresInMs: null,
     amount: 0,
-    display: null
+    display: null,
   });
 
   // Amount input state (formatted and numeric)
@@ -63,121 +62,32 @@ export function Layout32Page() {
 
   const openCustomerDisplay = () => {
     window.open('/terminal/qr-display', '_blank', 'width=1000,height=900,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
-  }
+  };
 
   const clearTimer = () => {
     if (timer) {
       clearInterval(timer);
       setTimer(null);
     }
-  }
+  };
 
-  const startNewCountDown = (expiresMs) => {
-    clearTimer();
-
-    const endTime = moment().add(expiresMs ?? payment.expiresInMs, 'millisecond');
-
-    const tick = () => {
-      const diff = endTime.diff(moment());
-      if (diff > 0) {
-        const duration = moment.duration(diff);
-        const minutes = String(duration.minutes()).padStart(2, '0');
-        const seconds = String(duration.seconds()).padStart(2, '0');
-        setFormattedTime(`${minutes}:${seconds}`);
-      } else {
-        setPayment(prev => ({
-          ...prev,
-          display: false
-        }))
-        clearTimer();
-      }
-    };
-
-    tick();
-    setTimer(setInterval(tick, 1000));
-  }
-
-  const getQRData = async () => {
-    try {
-      return axiosInstance()
-        .post('/qr/create', {
-          kdUser: session.kd_user,
-          amount: amountNumber.toString(),
-          isTip: '0',
-          tipAmount: '0',
-          tipPersen: '0'
-        })
-        .then((response) => response.data);
-    } catch (e) {
-      console.log(e.message || e);
-      setGenerate(false);
-    }
-  }
-
-  const startPayment = async () => {
-    setGenerate(true);
-    const QRData = await getQRData().then(response => response);
-
-    let JSONData = {
-      domain: 'ID.CO.BANKSULUTGO.WWW',
-      outletName: outlet?.outlatName,
-      terminalID: outlet?.terminal?.[0]?.TerminalID,
-      MID: outlet?.MID,
-      NMID: outlet?.nmid,
-      MPAN: outlet?.MPAN,
-      MCC: outlet?.mcc,
-      kriteria: outlet?.kriteria,
-      currency: '360',
-      country: 'ID',
-      address: outlet?.kota,
-      postal: outlet?.kdPost,
-      billing: QRData.billing,
-      amount: QRData.set_amount,
-      withTip: '00',
-      tipAmount: '0',
-      tipPersen: '0'
-    };
-
-    const newPayment = {
-      currentTime: moment().format('YYYY-MM-DD HH:mm'),
-      outlet: outlet?.outlatName,
-      qr: QRService.toTLV(JSONData),
-      nmid: outlet?.nmid,
-      expiresInMs: 180000,
-      amount: amountNumber,
-      display: true
-    };
-
-    setPayment(newPayment);
-    startNewCountDown(newPayment.expiresInMs);
-    broadcastPayment(newPayment);
-    setGenerate(false);
-    setLoading(false);
-  }
-
-  const finishPayment = () => {
-    const next = { ...payment, display: false };
-    setPayment(next);
-    broadcastPayment(next);
-  }
-
-  const broadcastPayment = (payload) => {
+  const broadcastPayment = useCallback((payload) => {
     try {
       const channel = new BroadcastChannel('bsgqr-payment');
-      payload = JSON.parse(JSON.stringify(payload));
-      channel.postMessage(payload);
+      const sanitizedPayload = JSON.parse(JSON.stringify(payload));
+      channel.postMessage(sanitizedPayload);
       channel.close();
 
       // Fallback for environments without BroadcastChannel:
       // trigger same-origin tabs via localStorage 'storage' event
       try {
-        const withTs = { ...payload, __ts: Date.now() };
+        const withTs = { ...sanitizedPayload, __ts: Date.now() };
         localStorage.setItem('bsgqr-payment-sync', JSON.stringify(withTs));
       } catch (e) {
-        console.log(e.message || e);
+        console.error(e.message || e);
       }
     } catch (e) {
-      console.log(e.message || e);
+      console.error(e.message || e);
       // this.$toast?.add?.({
       //   severity: 'error',
       //   summary: 'Error',
@@ -185,7 +95,100 @@ export function Layout32Page() {
       //   life: 5000
       // });
     }
-  }
+  }, []);
+
+  const startNewCountDown = useCallback(
+    (expiresMs) => {
+      clearTimer();
+
+      const endTime = moment().add(expiresMs ?? payment.expiresInMs, 'millisecond');
+
+      const tick = () => {
+        const diff = endTime.diff(moment());
+        if (diff > 0) {
+          const duration = moment.duration(diff);
+          const minutes = String(duration.minutes()).padStart(2, '0');
+          const seconds = String(duration.seconds()).padStart(2, '0');
+          setFormattedTime(`${minutes}:${seconds}`);
+        } else {
+          const next = { ...payment, display: false };
+          setPayment(next);
+          broadcastPayment(next);
+          clearTimer();
+        }
+      };
+
+      tick();
+      setTimer(setInterval(tick, 1000));
+    },
+    [payment, broadcastPayment]
+  );
+
+  const getQRData = useCallback(async () => {
+    try {
+      const response = await axiosInstance().post('/qr/create', {
+        kdUser: session.kd_user,
+        amount: amountNumber.toString(),
+        isTip: '0',
+        tipAmount: '0',
+        tipPersen: '0',
+      });
+      return response.data;
+    } catch (e) {
+      console.error(e.message || e);
+      setGenerate(false);
+      return null;
+    }
+  }, [session.kd_user, amountNumber]);
+
+  const startPayment = useCallback(async () => {
+    setGenerate(true);
+    const QRData = await getQRData();
+
+    if (QRData) {
+      const JSONData = {
+        domain: 'ID.CO.BANKSULUTGO.WWW',
+        outletName: outlet?.outlatName,
+        terminalID: outlet?.terminal?.[0]?.TerminalID,
+        MID: outlet?.MID,
+        NMID: outlet?.nmid,
+        MPAN: outlet?.MPAN,
+        MCC: outlet?.mcc,
+        kriteria: outlet?.kriteria,
+        currency: '360',
+        country: 'ID',
+        address: outlet?.kota,
+        postal: outlet?.kdPost,
+        billing: QRData.billing,
+        amount: QRData.set_amount,
+        withTip: '00',
+        tipAmount: '0',
+        tipPersen: '0',
+      };
+
+      const newPayment = {
+        currentTime: moment().format('YYYY-MM-DD HH:mm'),
+        outlet: outlet?.outlatName,
+        qr: QRService.toTLV(JSONData),
+        nmid: outlet?.nmid,
+        expiresInMs: 180000,
+        amount: amountNumber,
+        display: true,
+      };
+
+      setPayment(newPayment);
+      startNewCountDown(newPayment.expiresInMs);
+      broadcastPayment(newPayment);
+    }
+
+    setGenerate(false);
+  }, [getQRData, outlet, amountNumber, startNewCountDown, broadcastPayment]);
+
+  const finishPayment = () => {
+    const next = { ...payment, display: false };
+    setPayment(next);
+    broadcastPayment(next);
+  };
 
   // Format input to Indonesian Rupiah thousands separator as user types
   const handleAmountChange = (e) => {
@@ -209,7 +212,7 @@ export function Layout32Page() {
   const handleAmountKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (!loading && !generate) {
+      if (!generate) {
         startPayment();
       }
     }
@@ -247,7 +250,7 @@ export function Layout32Page() {
   };
 
   const QRIS_LOGO = '/media/bsg/qris-logo-dark.png';
-  const hasQR = !!(outlet?.qris?.qr_base64);
+  const hasQR = !!outlet?.qris?.qr_base64;
 
   const formattedTimeSeverity = (() => {
     const [mm] = (formattedTime || '00:00').split(':');
@@ -271,8 +274,12 @@ export function Layout32Page() {
             </ToolbarDescription>
           </ToolbarHeading>
           <ToolbarActions>
-            <Button variant={tab === 'outlet' ? 'mono' : 'outline' } onClick={() => setTab('outlet')}>Outlet</Button>
-            <Button variant={tab === 'transaksi' ? 'mono' : 'outline' } onClick={() => setTab('transaksi')}>Transaksi</Button>
+            <Button variant={tab === 'outlet' ? 'mono' : 'outline'} onClick={() => setTab('outlet')}>
+              Outlet
+            </Button>
+            <Button variant={tab === 'transaksi' ? 'mono' : 'outline'} onClick={() => setTab('transaksi')}>
+              Transaksi
+            </Button>
           </ToolbarActions>
         </Toolbar>
       )}
@@ -281,8 +288,7 @@ export function Layout32Page() {
         <Skeleton
           className="rounded-lg grow h-[calc(100vh-10rem)] mt-10 mb-5 border border-dashed border-input bg-background text-subtle-stroke relative text-border"
           style={{
-            backgroundImage:
-              'repeating-linear-gradient(125deg, transparent, transparent 5px, currentcolor 5px, currentcolor 6px)',
+            backgroundImage: 'repeating-linear-gradient(125deg, transparent, transparent 5px, currentcolor 5px, currentcolor 6px)',
           }}
         ></Skeleton>
       ) : (
@@ -295,16 +301,26 @@ export function Layout32Page() {
                   <div className="flex flex-col md:basis-2/6 gap-1">
                     <div className="group/overlay relative h-full">
                       <div className="absolute inset-0 rounded-xl bg-black/50 flex items-center justify-center opacity-0 group-hover/overlay:opacity-100 transition-opacity duration-300">
-                        <Button className="text-xs md:text-sm xl:text-base" variant="outline" onClick={() => ImagePrintService.base64(outlet?.qris?.qr_base64)}>Print / Download</Button>
+                        <Button
+                          className="text-xs md:text-sm xl:text-base"
+                          variant="outline"
+                          onClick={() => ImagePrintService.base64(outlet?.qris?.qr_base64)}
+                        >
+                          Print / Download
+                        </Button>
                       </div>
-                      <img src={outlet?.qris?.qr_base64} aria-label="QRIS Image" className="w-full h-full object-contain rounded-xl" alt="Qris-Image" />
+                      <img
+                        src={outlet?.qris?.qr_base64}
+                        aria-label="QRIS Image"
+                        className="w-full h-full object-contain rounded-xl"
+                        alt="Qris-Image"
+                      />
                     </div>
                   </div>
                 )}
 
                 {/* OUTLET INFOS */}
                 <div className={`flex flex-col 2xl:flex-row gap-5 ${hasQR ? 'md:basis-4/6' : 'basis-full'}`}>
-
                   {/* LEFT CARD */}
                   <Card className="inline-block w-full h-full" variant="accent">
                     <CardHeader>
@@ -323,7 +339,7 @@ export function Layout32Page() {
                       </div>
                       <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                         <span>Tipe Usaha</span>
-                        <span>{outlet?.tipe_usaha === "INDIVIDU" ? "INDIVIDU" : "BADAN USAHA"}</span>
+                        <span>{outlet?.tipe_usaha === 'INDIVIDU' ? 'INDIVIDU' : 'BADAN USAHA'}</span>
                       </div>
                       {outlet?.tipe_usaha === 'BADAN_USAHA' && (
                         <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
@@ -392,7 +408,7 @@ export function Layout32Page() {
                               variant="lg"
                               type="text"
                               inputMode="numeric"
-                              disabled={loading}
+                              disabled={generate}
                               value={amount}
                               onChange={handleAmountChange}
                               onKeyDown={handleAmountKeyDown}
@@ -401,21 +417,45 @@ export function Layout32Page() {
                           {/* Keypad */}
                           <div className="mt-4 select-none">
                             <div className="grid grid-cols-3 gap-2 xl:gap-4">
-                              {["1","2","3","4","5","6","7","8","9"].map((digit) => (
+                              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                                 <Button
                                   size="lg"
                                   key={digit}
                                   variant="outline"
-                                  disabled={loading}
+                                  disabled={generate}
                                   className="h-12 xl:text-2xl 2xl:text-3xl"
                                   onClick={() => appendDigits(digit)}
                                 >
                                   {digit}
                                 </Button>
                               ))}
-                              <Button aria-label="add zero zero" variant="outline" disabled={loading} className="xl:h-16 2xl:h-20 xl:text-2xl 2xl:text-3xl" onClick={() => appendDigits('00')}>00</Button>
-                              <Button aria-label="add zero" variant="outline" disabled={loading} className="xl:h-16 2xl:h-20 xl:text-2xl 2xl:text-3xl" onClick={() => appendDigits('0')}>0</Button>
-                              <Button aria-label="add triple zero" variant="outline" disabled={loading} className="xl:h-16 2xl:h-20 xl:text-2xl 2xl:text-3xl" onClick={() => appendDigits('000')}>000</Button>
+                              <Button
+                                aria-label="add zero zero"
+                                variant="outline"
+                                disabled={generate}
+                                className="xl:h-16 2xl:h-20 xl:text-2xl 2xl:text-3xl"
+                                onClick={() => appendDigits('00')}
+                              >
+                                00
+                              </Button>
+                              <Button
+                                aria-label="add zero"
+                                variant="outline"
+                                disabled={generate}
+                                className="xl:h-16 2xl:h-20 xl:text-2xl 2xl:text-3xl"
+                                onClick={() => appendDigits('0')}
+                              >
+                                0
+                              </Button>
+                              <Button
+                                aria-label="add triple zero"
+                                variant="outline"
+                                disabled={generate}
+                                className="xl:h-16 2xl:h-20 xl:text-2xl 2xl:text-3xl"
+                                onClick={() => appendDigits('000')}
+                              >
+                                000
+                              </Button>
                             </div>
                             <div className="mt-2 grid grid-cols-3 gap-2 xl:gap-4 mb-5">
                               <Button
@@ -423,7 +463,7 @@ export function Layout32Page() {
                                 aria-label="backspace"
                                 variant="outline"
                                 size="lg"
-                                disabled={loading}
+                                disabled={generate}
                                 onClick={backspaceDigit}
                               >
                                 {'<<'}
@@ -433,27 +473,34 @@ export function Layout32Page() {
                                 aria-label="clear"
                                 variant="outline"
                                 size="lg"
-                                disabled={loading}
+                                disabled={generate}
                                 onClick={clearAll}
                               >
                                 <RotateCcw />
                               </Button>
                               <Button
-                                className={`col-span-full ${generate ? 'bg-slate-500' : 'bg-green-500'} xl:h-16 2xl:h-20 xl:text-xl 2xl:text-2xl`}
+                                className="col-span-full xl:h-16 2xl:h-20 xl:text-xl 2xl:text-2xl"
                                 size="lg"
                                 disabled={generate}
                                 type="submit"
                                 onClick={() => startPayment()}
                               >
-                                {generate ? <LoaderCircleIcon className="animate-spin size-4" /> : null}
-                                {generate ? 'Processing...' : 'Generate'}
+                                {generate ? (
+                                  <>
+                                    <LoaderCircleIcon className="animate-spin size-4" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  'Generate'
+                                )}
                               </Button>
                               <Button
-                                className={`col-span-full ${generate ? 'bg-slate-500' : 'bg-gray-50'} xl:h-16 2xl:h-20 xl:text-xl 2xl:text-2xl`}
+                                className="col-span-full xl:h-16 2xl:h-20 xl:text-xl 2xl:text-2xl"
                                 size="lg"
                                 variant="outline"
                                 severity="secondary"
-                                onClick={() => openCustomerDisplay()}>
+                                onClick={() => openCustomerDisplay()}
+                              >
                                 Display
                               </Button>
                             </div>
@@ -484,7 +531,9 @@ export function Layout32Page() {
                             </div>
                             <div className="flex flex-col text-center justify-center basis-11/12">
                               <p className="text-xl font-bold text-gray-500">Pembayaran</p>
-                              <p className="text-4xl font-bold text-gray-800 mb-3">Rp. {new Intl.NumberFormat('id-ID').format(payment?.amount || 0)}</p>
+                              <p className="text-4xl font-bold text-gray-800 mb-3">
+                                Rp. {new Intl.NumberFormat('id-ID').format(payment?.amount || 0)}
+                              </p>
                               <div className="flex flex-row justify-center gap-1">
                                 <i className="text-xl pi pi-clock text-gray-800"></i>
                                 <p className={`text-xl font-bold ${formattedTimeSeverity}`}>{formattedTime}</p>
@@ -495,7 +544,13 @@ export function Layout32Page() {
 
                         {/* BUTTON DISPLAY */}
                         <div className="flex flex-wrap h-14 justify-center">
-                          <Button className={'bg-red-900 hover:bg-red-500 xl:h-16 2xl:h-20 xl:text-xl 2xl:text-2xl'} size="lg" onClick={finishPayment}><X/> Tutup Pembayaran</Button>
+                          <Button
+                            className={'bg-red-900 hover:bg-red-500 xl:h-16 2xl:h-20 xl:text-xl 2xl:text-2xl'}
+                            size="lg"
+                            onClick={finishPayment}
+                          >
+                            <X /> Tutup Pembayaran
+                          </Button>
                         </div>
                       </div>
                     </>
