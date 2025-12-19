@@ -356,7 +356,7 @@ export function MerchantReportPage() {
       )}
 
       {/* Chart */}
-      {history.length > 0 && (
+      {history.length > 0 && selectedPreset !== 'today' && (
         <Card>
           <CardHeader className="py-3.5">
             <CardTitle>Tren Amount per Hari</CardTitle>
