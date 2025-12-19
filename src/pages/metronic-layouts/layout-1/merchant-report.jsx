@@ -47,10 +47,18 @@ export function MerchantReportPage() {
   };
 
   const handleAmountFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
-      amount: { ...prev.amount, [key]: value }
-    }));
+    if (key === 'value') {
+      const numericValue = value.replace(/[^0-9]/g, '');
+      setFilters(prev => ({
+        ...prev,
+        amount: { ...prev.amount, [key]: numericValue }
+      }));
+    } else {
+      setFilters(prev => ({
+        ...prev,
+        amount: { ...prev.amount, [key]: value }
+      }));
+    }
   };
 
   // Quick range presets (relative to now, local time)
@@ -117,6 +125,12 @@ export function MerchantReportPage() {
         const amountValue = parseFloat(filters.amount.value);
         if (!isNaN(amountValue)) {
           const itemAmount = Number(item.amount);
+          if (filters.amount.operator === 'gte' && itemAmount < amountValue) {
+            return false;
+          }
+          if (filters.amount.operator === 'lte' && itemAmount > amountValue) {
+            return false;
+          }
           if (filters.amount.operator === 'gt' && itemAmount <= amountValue) {
             return false;
           }
@@ -157,12 +171,6 @@ export function MerchantReportPage() {
       });
   }, [history, filters]);
 
-  const filteredTotals = useMemo(() => {
-    const totalAmount = filteredHistory.reduce((sum, it) => sum + Number(it.amount || 0), 0);
-    const count = filteredHistory.length;
-    return { totalAmount, count };
-  }, [filteredHistory]);
-
   const isFiltered = useMemo(() => {
     return Object.values(filters).some(val => {
       if (typeof val === 'string') return val.length > 0 && val !== 'All';
@@ -171,28 +179,36 @@ export function MerchantReportPage() {
     });
   }, [filters]);
 
+  const filteredTotals = useMemo(() => {
+    const totalAmount = filteredHistory.reduce((sum, it) => sum + Number(it.amount || 0), 0);
+    const count = filteredHistory.length;
+    return { totalAmount, count };
+  }, [filteredHistory]);
+
   // Derived metrics
   const totals = useMemo(() => {
-    const totalAmount = history.reduce((sum, it) => sum + Number(it.amount || 0), 0);
-    const count = history.length;
+    const data = isFiltered ? filteredHistory : history;
+    const totalAmount = data.reduce((sum, it) => sum + Number(it.amount || 0), 0);
+    const count = data.length;
     const avg = count ? totalAmount / count : 0;
-    const byDevice = history.reduce((m, it) => {
+    const byDevice = data.reduce((m, it) => {
       const key = it.device || '-';
       m[key] = (m[key] || 0) + 1;
       return m;
     }, {});
-    const byTerminal = history.reduce((m, it) => {
+    const byTerminal = data.reduce((m, it) => {
       const key = it.terminal || '-';
       m[key] = (m[key] || 0) + 1;
       return m;
     }, {});
     return { totalAmount, count, avg, byDevice, byTerminal };
-  }, [history]);
+  }, [history, filteredHistory, isFiltered]);
 
   // Simple daily bucket for the chart (local time)
   const chartData = useMemo(() => {
+    const data = isFiltered ? filteredHistory : history;
     const buckets = new Map();
-    for (const it of history) {
+    for (const it of data) {
       const m = moment(it.timestamprq); // local time per spec
       if (!m.isValid()) continue;
       const key = m.format('YYYY-MM-DD');
@@ -203,7 +219,7 @@ export function MerchantReportPage() {
       .map(([date, amount]) => ({ date, amount }))
       .sort((a, b) => (a.date < b.date ? -1 : 1));
     return arr;
-  }, [history]);
+  }, [history, filteredHistory, isFiltered]);
 
   const deviceChips = useMemo(() => Object.entries(totals.byDevice || {}), [totals.byDevice]);
 
@@ -479,14 +495,16 @@ export function MerchantReportPage() {
                         onChange={(e) => handleAmountFilterChange('operator', e.target.value)}
                       >
                         <option value="eq">=</option>
+                        <option value="gte">≥</option>
+                        <option value="lte">≤</option>
                         <option value="gt">&gt;</option>
                         <option value="lt">&lt;</option>
                       </select>
                       <Input
-                        type="number"
+                        type="text"
                         placeholder="Value..."
                         className="h-8"
-                        value={filters.amount.value}
+                        value={formatIDR(filters.amount.value).replace('IDR', '').trim()}
                         onChange={(e) => handleAmountFilterChange('value', e.target.value)}
                       />
                     </div>
