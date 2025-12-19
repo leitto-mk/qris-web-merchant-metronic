@@ -657,7 +657,7 @@ function buildExpandedDetails(merchant, data) {
   return (
     <div className="flex flex-col 2xl:flex-row gap-10 m-5">
       {/* QR IMAGE */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 flex-shrink-0">
         <div className="group/overlay relative">
           <div className="absolute inset-0 rounded-xl bg-black/50 flex items-center justify-center opacity-0 group-hover/overlay:opacity-100 transition-opacity duration-300">
             <Button
