@@ -224,13 +224,7 @@ export function MerchantReportPage() {
   const deviceChips = useMemo(() => Object.entries(totals.byDevice || {}), [totals.byDevice]);
 
   const isMockEnabled = () => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('mockHistory') === '1') return true;
-      return String(import.meta.env?.VITE_USE_MOCK_HISTORY).toLowerCase() === 'true';
-    } catch (_) {
-      return false;
-    }
+    return window.APP_ENV === 'development';
   };
 
   const handleTransactionHistory = async () => {
@@ -320,7 +314,7 @@ export function MerchantReportPage() {
       const mock = generateTransactionHistory({ count: 50, from: dateFrom, to: dateTo, merchant });
       setHistory(mock);
     } catch (e) {
-      setError('Gagal membuat data dummy.');
+      setError('Gagal membuat data dummy: ' + e.message);
     } finally {
       setLoadingHistory(false);
     }
@@ -386,9 +380,11 @@ export function MerchantReportPage() {
             <Button onClick={handleTransactionHistory} disabled={loadingHistory}>
               {loadingHistory ? 'Mengambil...' : 'Ambil Report'}
             </Button>
-            <Button variant="dashed" onClick={handleTransactionHistoryMock} disabled={loadingHistory}>
-              Gunakan Dummy (50)
-            </Button>
+            {isMockEnabled() && (
+              <Button variant="dashed" onClick={handleTransactionHistoryMock} disabled={loadingHistory}>
+                Gunakan Dummy (50)
+              </Button>
+            )}
           </div>
           {error ? (
             <div className="text-red-500 text-sm">{error}</div>
