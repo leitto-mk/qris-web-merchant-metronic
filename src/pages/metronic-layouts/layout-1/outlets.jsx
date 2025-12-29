@@ -77,6 +77,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton.jsx';
 
 const ModalContents = {
   AddDeviceModalContent: ({ selected, closeModal }) => {
@@ -861,8 +862,57 @@ function buildExpandedDetails(merchant, data) {
   );
 }
 
+function OutletPageSkeleton() {
+  return (
+    <div className="my-2 mx-8 flex flex-wrap gap-5">
+      <Card className="w-full">
+        <CardHeader className="py-3.5">
+          <CardTitle>
+            <Skeleton className="h-6 w-48" />
+          </CardTitle>
+        </CardHeader>
+        <CardTable>
+          <div className="divide-y">
+            <div className="flex items-center justify-between p-5 text-sm font-medium text-muted-foreground">
+              <Skeleton className="h-5 w-1/6" />
+              <Skeleton className="h-5 w-1/6" />
+              <Skeleton className="h-5 w-1/6" />
+              <Skeleton className="h-5 w-1/6" />
+              <Skeleton className="h-5 w-1/6" />
+              <Skeleton className="h-5 w-1/6" />
+            </div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between p-5">
+                <Skeleton className="h-8 w-1/6" />
+                <Skeleton className="h-8 w-1/6" />
+                <Skeleton className="h-8 w-1/6" />
+                <Skeleton className="h-8 w-1/6" />
+                <Skeleton className="h-8 w-1/6" />
+                <Skeleton className="h-8 w-1/6" />
+              </div>
+            ))}
+          </div>
+        </CardTable>
+        <CardFooter>
+          <div className="flex w-full items-center justify-between gap-4">
+            <Skeleton className="h-8 w-48" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-16" />
+              <div className="flex items-center gap-1">
+                <Skeleton className="h-8 w-8" />
+                <Skeleton className="h-8 w-8" />
+              </div>
+            </div>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
+
 export function OutletPage() {
-  const { merchant, outlets } = useAppData();
+  const { merchant, outlets, loading } = useAppData();
 
   const [sorting, setSorting] = useState([{ id: 'outlatName', desc: true }]);
   const [pagination, setPagination] = useState({
@@ -1072,6 +1122,10 @@ export function OutletPage() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  if (loading) {
+    return <OutletPageSkeleton />;
+  }
 
   return (
     <div className="my-2 mx-8 flex flex-wrap gap-5">

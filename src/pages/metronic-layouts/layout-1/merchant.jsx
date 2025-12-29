@@ -30,6 +30,42 @@ function renderInfoRow(label, value, loading) {
   );
 }
 
+function renderSkeleton() {
+  return (
+    <div className="my-2 mx-8 flex flex-row gap-5">
+      <div className="flex flex-col gap-5 basis-4/6">
+        <Skeleton className="h-[200px] w-full rounded-2xl" />
+        <div className="flex flex-col md:flex-row gap-5 justify-between">
+          <Card className="w-full" variant="accent">
+            <CardHeader>
+              <CardHeading>
+                <CardTitle>Informasi Merchant</CardTitle>
+              </CardHeading>
+            </CardHeader>
+            <CardContent className="py-1">
+              <div className="flex flex-col gap-4 p-5">
+                {[...Array(9)].map((_, i) => (
+                  <div className="flex flex-row gap-4" key={i}>
+                    <div className="font-bold w-3/4">
+                      <Skeleton className="h-4 w-[100px]" />
+                    </div>
+                    <div className="w-full">
+                      <Skeleton className="h-4 w-[175px]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      <div className="flex flex-col basis-2/6">
+        <Skeleton className="h-[400px] w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
 export function MerchantPage() {
   const { merchant, outlets, loading } = useAppData();
 
@@ -47,6 +83,10 @@ export function MerchantPage() {
       0,
     [outlets]
   );
+
+  if (loading) {
+    return renderSkeleton();
+  }
 
   return (
     <div
