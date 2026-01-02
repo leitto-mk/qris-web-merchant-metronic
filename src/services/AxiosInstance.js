@@ -118,7 +118,8 @@ const axiosInstance = () => {
    */
   instance.interceptors.response.use(
     (response) => {
-      const msg = response?.data?.message.toLowerCase() === 'success' ? '✅' : response?.data?.message;
+      const rawMsg = response?.data?.message || response?.data?.error_msg;
+      const msg = rawMsg?.toLowerCase() === 'success' ? '✅' : rawMsg;
 
       const shouldToast = shouldToastForUrl(response?.config?.url);
       if (shouldToast) {
