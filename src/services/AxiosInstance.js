@@ -97,8 +97,10 @@ const axiosInstance = () => {
   const instance = axios.create({
       baseURL: API,
       headers: {
-          'Content-Type': 'application/json',
-          'X-BSG-WEBMRCH-TOKEN': localStorage.getItem('qris-web-merchant-token') ?? 'unused'
+        'Content-Type': 'application/json',
+        ...(ENV !== 'production' && {
+          'X-BSG-WEBMRCH-TOKEN': localStorage.getItem('qris-web-merchant-token') ?? 'unused',
+        }),
       },
       responseType: 'json',
       responseEncoding: 'utf-8',
