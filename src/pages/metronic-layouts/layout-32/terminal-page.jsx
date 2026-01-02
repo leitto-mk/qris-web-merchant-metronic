@@ -11,7 +11,7 @@ import {
 import { useAppData } from '@/context/AppDataContext.jsx';
 import { Card, CardContent, CardHeader, CardHeading } from '@/components/ui/card.jsx';
 import ImagePrintService from '@/services/ImagePrintService.js';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import QRCode from 'react-qr-code';
 import { LoaderCircleIcon, RotateCcw, X } from 'lucide-react';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
@@ -41,14 +41,35 @@ export function Layout32Page() {
   const [amount, setAmount] = useState('');
   const [amountNumber, setAmountNumber] = useState(0);
   const session = AuthService.retrieveSession();
+
+  // Wait for app context data ready before rendering/using it
+  if (appLoading) {
+    return (
+      <div className="p-6">
+        <Toolbar>
+          <ToolbarPageTitle>Terminal</ToolbarPageTitle>
+        </Toolbar>
+        <div className="space-y-4 mt-6">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  // Select a single outlet to display/work with (use the first one if multiple)
   const outlet = Array.isArray(outlets) ? outlets[0] : outlets;
 
-  const clearTimer = useCallback(() => {
+  const openCustomerDisplay = () => {
+    window.open('/terminal/qr-display', '_blank', 'width=1000,height=900,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
+  };
+
+  const clearTimer = () => {
     if (timer) {
       clearInterval(timer);
       setTimer(null);
     }
-  }, [timer]);
+  };
 
   const broadcastPayment = useCallback((payload) => {
     try {
@@ -100,7 +121,7 @@ export function Layout32Page() {
       tick();
       setTimer(setInterval(tick, 1000));
     },
-    [payment, broadcastPayment, clearTimer]
+    [payment, broadcastPayment]
   );
 
   const getQRData = useCallback(async () => {
@@ -163,11 +184,17 @@ export function Layout32Page() {
     setGenerate(false);
   }, [getQRData, outlet, amountNumber, startNewCountDown, broadcastPayment]);
 
+  const finishPayment = () => {
+    const next = { ...payment, display: false };
+    setPayment(next);
+    broadcastPayment(next);
+  };
+
   // Format input to Indonesian Rupiah thousands separator as user types
   const handleAmountChange = (e) => {
     const raw = e.target.value || '';
     // Keep only digits
-    const digits = raw.replace(/\D/g, '');
+    const digits = raw.replace(/[^\d]/g, '');
     // Limit to max 15 digits to avoid overflow
     const limited = digits.slice(0, 15);
     if (!limited) {
@@ -220,37 +247,6 @@ export function Layout32Page() {
   const clearAll = () => {
     setAmount('');
     setAmountNumber(0);
-  };
-
-  useEffect(() => {
-    return () => {
-      clearTimer();
-    };
-  }, [clearTimer]);
-
-  // Wait for app context data ready before rendering/using it
-  if (appLoading) {
-    return (
-      <div className="p-6">
-        <Toolbar>
-          <ToolbarPageTitle>Terminal</ToolbarPageTitle>
-        </Toolbar>
-        <div className="space-y-4 mt-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-48 w-full" />
-        </div>
-      </div>
-    );
-  }
-
-  const openCustomerDisplay = () => {
-    window.open('/terminal/qr-display', '_blank', 'width=1000,height=900,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
-  };
-
-  const finishPayment = () => {
-    const next = { ...payment, display: false };
-    setPayment(next);
-    broadcastPayment(next);
   };
 
   const QRIS_LOGO = '/media/bsg/qris-logo-dark.png';
