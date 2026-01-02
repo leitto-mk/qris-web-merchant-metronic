@@ -118,11 +118,11 @@ const axiosInstance = () => {
    */
   instance.interceptors.response.use(
     (response) => {
-      // const msg = response?.data?.message || 'Success';
+      const msg = response?.data?.message.toLowerCase() === 'success' ? '✅' : response?.data?.message;
 
       const shouldToast = shouldToastForUrl(response?.config?.url);
       if (shouldToast) {
-        toast.success('Permintaan Berhasil');
+        toast.success('Permintaan Berhasil: ' + msg);
       }
 
       return response;
