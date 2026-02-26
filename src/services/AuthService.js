@@ -22,7 +22,9 @@ const getApiHeaders = () => {
 const AuthService = {
   async login(formData) {
     try {
-      const response = await axios.post(API + '/login', formData);
+      const response = await axios.post(API + '/login', formData, {
+        withCredentials: ENV === 'production' // Required for cross-origin cookies
+      });
       const data = response.data.data;
 
       if (ENV !== 'production') {
