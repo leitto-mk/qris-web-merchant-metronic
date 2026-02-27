@@ -259,7 +259,11 @@ export function MerchantReportPage() {
       }
 
       const { data } = await axiosInstance().post(`/history/${merchantId}/trx`, payload);
-      setHistory(Array.isArray(data) ? data : []);
+      
+      // Check if the actual array is inside data.data (from the API response structure), 
+      // otherwise fallback to data if the API ever returns a direct array.
+      const transactionsArray = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      setHistory(transactionsArray);
     } catch (error) {
       console.error('Gagal mengambil riwayat transaksi:', error?.response?.data?.errors ?? error);
       setError('Gagal mengambil data. Coba lagi.');
