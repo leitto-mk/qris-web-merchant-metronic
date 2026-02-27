@@ -67,9 +67,9 @@ export function MerchantReportPage() {
   const getRange = (key) => {
     const now = nowLocal();
     if (key === 'today') return { from: startOfToday(), to: now };
+    if (key === '1d') return { from: minusDays(now, 1), to: now };
     if (key === '7d') return { from: minusDays(now, 7), to: now };
     if (key === '30d') return { from: minusDays(now, 30), to: now };
-    if (key === '90d') return { from: minusDays(now, 90), to: now };
     return { from: dateFrom, to: dateTo };
   };
   const applyPreset = (key) => {
@@ -364,6 +364,14 @@ export function MerchantReportPage() {
               </Button>
               <Button
                 type="button"
+                variant={selectedPreset === '1d' ? 'mono' : 'dashed'}
+                onClick={() => applyPreset('1d')}
+                disabled={loadingHistory}
+              >
+                Kemarin
+              </Button>
+              <Button
+                type="button"
                 variant={selectedPreset === '7d' ? 'mono' : 'dashed'}
                 onClick={() => applyPreset('7d')}
                 disabled={loadingHistory}
@@ -377,14 +385,6 @@ export function MerchantReportPage() {
                 disabled={loadingHistory}
               >
                 30 Hari
-              </Button>
-              <Button
-                type="button"
-                variant={selectedPreset === '90d' ? 'mono' : 'dashed'}
-                onClick={() => applyPreset('90d')}
-                disabled={loadingHistory}
-              >
-                3 Bulan
               </Button>
             </div>
             <div className="flex-1" />
