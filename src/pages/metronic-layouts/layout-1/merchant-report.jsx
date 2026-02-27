@@ -263,6 +263,13 @@ export function MerchantReportPage() {
       // Check if the actual array is inside data.data (from the API response structure), 
       // otherwise fallback to data if the API ever returns a direct array.
       const transactionsArray = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+
+      //Map Value
+      transactionsArray.map((tx) => ({
+        ...tx,
+        device: tx?.device === 'QRISAJ' ? 'OFF-US' : tx?.device,
+      }));
+
       setHistory(transactionsArray);
     } catch (error) {
       console.error('Gagal mengambil riwayat transaksi:', error?.response?.data?.errors ?? error);
@@ -447,7 +454,11 @@ export function MerchantReportPage() {
                 <Recharts.AreaChart data={chartData} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
                   <Recharts.CartesianGrid strokeDasharray="3 3" />
                   <Recharts.XAxis dataKey="date" tickLine={false} axisLine={false} />
-                  <Recharts.YAxis tickLine={false} axisLine={false} />
+                  <Recharts.YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => new Intl.NumberFormat('id-ID').format(Number(value || 0))}
+                  />
                   <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
                   <Recharts.Area type="monotone" dataKey="amount" stroke="#22c55e" fill="#22c55e33" />
                   <ChartLegend content={<ChartLegendContent />} />
