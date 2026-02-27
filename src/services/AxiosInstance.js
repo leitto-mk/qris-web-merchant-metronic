@@ -98,7 +98,6 @@ const axiosInstance = () => {
       baseURL: API,
       headers: {
         'Content-Type': 'application/json',
-        'Accept-Encoding': 'gzip',
         ...(ENV !== 'production' && {
           'X-BSG-WEBMRCH-TOKEN': localStorage.getItem('qris-web-merchant-token') ?? 'unused',
         }),
