@@ -27,7 +27,7 @@ export function MerchantReportPage() {
   const [filters, setFilters] = useState({
     timestamprq: '',
     amount: { operator: 'eq', value: '' },
-    device: '',
+    issuer: '',
     outlet: '',
     terminal: '',
     rrn: '',
@@ -92,10 +92,10 @@ export function MerchantReportPage() {
 
   const maskAcc = (acc) => (acc ? String(acc).replace(/(\d{4})\d+(\d{4})/, '$1••••$2') : '-');
 
-  const uniqueDevices = useMemo(() => {
+  const uniqeIssuers = useMemo(() => {
     if (!history.length) return [];
-    const devices = new Set(history.map(item => item.device).filter(Boolean));
-    return ['All', ...Array.from(devices)];
+    const issuers = new Set(history.map(item => item.issuer).filter(Boolean));
+    return ['All', ...Array.from(issuers)];
   }, [history]);
 
   const uniqueOutlets = useMemo(() => {
@@ -143,7 +143,7 @@ export function MerchantReportPage() {
         }
 
         // Select filters
-        if (filters.device && filters.device !== 'All' && item.device !== filters.device) {
+        if (filters.issuer && filters.issuer !== 'All' && item.issuer !== filters.issuer) {
           return false;
         }
         if (filters.outlet && filters.outlet !== 'All' && item.outlet !== filters.outlet) {
@@ -191,8 +191,8 @@ export function MerchantReportPage() {
     const totalAmount = data.reduce((sum, it) => sum + Number(it.amount || 0), 0);
     const count = data.length;
     const avg = count ? totalAmount / count : 0;
-    const byDevice = data.reduce((m, it) => {
-      const key = it.device || '-';
+    const byIssuer = data.reduce((m, it) => {
+      const key = it.issuer || '-';
       m[key] = (m[key] || 0) + 1;
       return m;
     }, {});
@@ -201,7 +201,7 @@ export function MerchantReportPage() {
       m[key] = (m[key] || 0) + 1;
       return m;
     }, {});
-    return { totalAmount, count, avg, byDevice, byTerminal };
+    return { totalAmount, count, avg, byIssuer, byTerminal };
   }, [history, filteredHistory, isFiltered]);
 
   // Simple daily bucket for the chart (local time)
@@ -221,7 +221,7 @@ export function MerchantReportPage() {
     return arr;
   }, [history, filteredHistory, isFiltered]);
 
-  const deviceChips = useMemo(() => Object.entries(totals.byDevice || {}), [totals.byDevice]);
+  const issuerChips = useMemo(() => Object.entries(totals.byIssuer || {}), [totals.byIssuer]);
 
   const isMockEnabled = () => {
     return window.APP_ENV === 'development';
@@ -267,7 +267,7 @@ export function MerchantReportPage() {
       //Map Value
       transactionsArray.map((tx) => ({
         ...tx,
-        device: tx?.device === 'QRISAJ' ? 'OFF-US' : tx?.device,
+        issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
       }));
 
       setHistory(transactionsArray);
@@ -283,14 +283,14 @@ export function MerchantReportPage() {
     if (filteredHistory.length === 0) return;
 
     const headers = [
-      'Tanggal', 'Amount', 'Device', 'Outlet', 'Terminal', 'RRN', 'From Name', 'From Acc', 'To Acc'
+      'Tanggal', 'Amount', 'Issuer', 'Outlet', 'Terminal', 'RRN', 'From Name', 'From Acc', 'To Acc'
     ];
 
     // Using filtered and sorted data
     const rows = filteredHistory.map(item => [
       `"${new Date(item.timestamprq).toLocaleString('id-ID')}"`,
       item.amount,
-      `"${item.device || ''}"`,
+      `"${item.issuer || ''}"`,
       `"${item.outlet || ''}"`,
       `"${item.terminal || ''}"`,
       `"${item.rrn || ''}"`,
@@ -425,14 +425,14 @@ export function MerchantReportPage() {
         </Card>
       </div>
 
-      {/* Device chips */}
-      {deviceChips.length > 0 && (
+      {/* Issuer chips */}
+      {issuerChips.length > 0 && (
         <Card variant="accent">
           <CardHeader className="py-3.5">
             <CardTitle>Perangkat</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            {deviceChips.map(([name, cnt]) => (
+            {issuerChips.map(([name, cnt]) => (
               <Badge key={name} variant="secondary">{name}: {cnt}</Badge>
             ))}
           </CardContent>
@@ -488,7 +488,7 @@ export function MerchantReportPage() {
                 <tr className="text-left border-b border-dashed">
                   <th className="py-2 pr-4">Tanggal</th>
                   <th className="py-2 pr-4 text-right">Amount</th>
-                  <th className="py-2 pr-4">Device</th>
+                  <th className="py-2 pr-4">Issuer</th>
                   <th className="py-2 pr-4">Outlet</th>
                   <th className="py-2 pr-4">Terminal</th>
                   <th className="py-2 pr-4">RRN</th>
@@ -523,10 +523,10 @@ export function MerchantReportPage() {
                   <td className="py-2 pr-4">
                     <select
                       className="h-8 border border-input bg-background rounded-md px-2 w-full"
-                      value={filters.device}
-                      onChange={(e) => handleFilterChange('device', e.target.value)}
+                      value={filters.issuer}
+                      onChange={(e) => handleFilterChange('issuer', e.target.value)}
                     >
-                      {uniqueDevices.map(d => <option key={d} value={d}>{d}</option>)}
+                      {uniqeIssuers.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </td>
                   <td className="py-2 pr-4">
@@ -558,7 +558,7 @@ export function MerchantReportPage() {
                   <tr key={idx} className="border-b border-dashed last:border-0">
                     <td className="py-2 pr-4 whitespace-nowrap">{new Date(it.timestamprq).toLocaleString('id-ID')}</td>
                     <td className="py-2 pr-4 text-right font-mono">{formatIDR(it.amount)}</td>
-                    <td className="py-2 pr-4">{it.device}</td>
+                    <td className="py-2 pr-4">{it.issuer}</td>
                     <td className="py-2 pr-4">{it.outlet}</td>
                     <td className="py-2 pr-4">{it.terminal}</td>
                     <td className="py-2 pr-4 font-mono">{it.rrn}</td>
