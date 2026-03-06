@@ -1,95 +1,42 @@
-import { useMemo, useState, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import {
-  Check,
-  EllipsisVertical,
-  Eye,
-  EyeClosed,
-  Key,
-  LoaderCircleIcon,
-  UserRoundIcon,
-  UserRoundMinus,
-  UserRoundPen,
-  UserRoundPlusIcon,
-  X,
-} from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
+import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X } from 'lucide-react';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardHeading,
-  CardTable,
-  CardTitle,
-} from '@/components/ui/card.jsx';
+import { Card, CardContent, CardFooter, CardHeader, CardHeading, CardTable, CardTitle } from '@/components/ui/card.jsx';
 import { DataGridPagination } from '@/components/ui/data-grid-pagination.jsx';
 import { DataGridTable } from '@/components/ui/data-grid-table.jsx';
 import { DataGrid } from '@/components/ui/data-grid.jsx';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog.jsx';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.jsx';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area.jsx';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select.jsx';
-import {
-  Stepper,
-  StepperContent,
-  StepperIndicator,
-  StepperItem,
-  StepperNav,
-  StepperPanel,
-  StepperSeparator,
-  StepperTitle,
-  StepperTrigger,
-} from '@/components/ui/stepper.jsx';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
+import { Stepper, StepperContent, StepperIndicator, StepperItem, StepperNav, StepperPanel, StepperSeparator, StepperTitle, StepperTrigger } from '@/components/ui/stepper.jsx';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 const ModalContents = {
   AddDeviceModalContent: ({ selected, closeModal }) => {
     const queryClient = useQueryClient();
-    const steps = [{ title: 'Ketentuan' }, { title: 'Konfirmasi' }, { title: 'Kirim' }];
+    const steps = [
+      { title: 'Ketentuan' },
+      { title: 'Konfirmasi' },
+      { title: 'Kirim' },
+    ];
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [sending, setSending] = useState(false);
     const [onShow, setOnShow] = useState(false);
     const [confirmPwd, setConfirmPwd] = useState('');
     const [emailFailAttempts, setEmailFailAttempts] = useState(
-      Number(selected?.email_fail_attempts ?? 0)
+      Number(selected?.email_fail_attempts ?? 0),
     );
 
     const confirmPassword = useCallback(async () => {
@@ -106,7 +53,7 @@ const ModalContents = {
         }
         console.error(
           'Konfirmasi password gagal:',
-          error?.response?.data?.errors ?? error
+          error?.response?.data?.errors ?? error,
         );
       } finally {
         setLoading(false);
@@ -135,7 +82,7 @@ const ModalContents = {
           setEmailFailAttempts((prev) => prev + 1);
           console.error(
             'Penambahan Terminal gagal:',
-            error?.response?.data?.errors ?? error
+            error?.response?.data?.errors ?? error,
           );
         })
         .finally(() => {
@@ -202,8 +149,8 @@ const ModalContents = {
                             <div className="flex flex-row gap-4">
                               <div className="font-bold">1.</div>
                               <div>
-                                Username untuk perangkat baru akan dikirimkan pada
-                                email yang telah terdaftar
+                                Username untuk perangkat baru akan dikirimkan
+                                pada email yang telah terdaftar
                               </div>
                             </div>
                             <div className="flex flex-row gap-3">
@@ -224,31 +171,31 @@ const ModalContents = {
                             <div className="flex flex-row gap-3">
                               <div className="font-bold">4.</div>
                               <div>
-                                Apabila user yang sudah terdaftar ingin melakukan
-                                perubahan, maka akan dilakukan oleh user Admin
-                                Merchant
+                                Apabila user yang sudah terdaftar ingin
+                                melakukan perubahan, maka akan dilakukan oleh
+                                user Admin Merchant
                               </div>
                             </div>
                             <div className="flex flex-row gap-3">
                               <div className="font-bold">5.</div>
                               <div>
-                                Ketentuan pengamanan username dan password adalah
-                                kewajiban pemegang user
+                                Ketentuan pengamanan username dan password
+                                adalah kewajiban pemegang user
                               </div>
                             </div>
                             <div className="flex flex-row gap-3">
                               <div className="font-bold">6.</div>
                               <div>
                                 Sehubungan dengan pengelolaan user, merchant
-                                bertanggung jawab sepenuhnya atas segala transaksi
-                                qris yang terjadi melalui perangkat
+                                bertanggung jawab sepenuhnya atas segala
+                                transaksi qris yang terjadi melalui perangkat
                               </div>
                             </div>
                             <div className="flex flex-row gap-3">
                               <div className="font-bold">7.</div>
                               <div>
-                                Atas pengelolaan ini, membebaskan bank dari risiko
-                                penyalahgunaan user dan password
+                                Atas pengelolaan ini, membebaskan bank dari
+                                risiko penyalahgunaan user dan password
                               </div>
                             </div>
                           </div>
@@ -447,93 +394,12 @@ const ModalContents = {
       </>
     );
   },
-  ResetTerminalModalContent: ({ selected, closeModal }) => {
-    const [loading, setLoading] = useState(false);
-    const [resetDeviceXID, setResetDeviceXID] = useState('');
-
-    const terminalOptions = (selected?.terminal ?? []).filter(
-      (item) => item?.TerminalID !== 'A01'
-    );
-
-    const resetDeviceTerminal = useCallback(async () => {
-      try {
-        setLoading(true);
-
-        if (!resetDeviceXID) throw new Error('Terminal harus dipilih');
-
-        const session = AuthService.retrieveSession();
-        if (!session || !session.kd_user) {
-          throw new Error(
-            'Sesi pengguna tidak tersedia. Silakan login kembali.'
-          );
-        }
-
-        await axiosInstance().post('/terminal/reset/device', {
-          kdUser: session.kd_user,
-          XID: resetDeviceXID,
-        });
-
-        // Close modal after successful request
-        closeModal();
-      } catch (error) {
-        console.error(
-          'Gagal mereset perangkat:',
-          error?.response?.data?.errors ?? error
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [resetDeviceXID, closeModal]);
-
-    return (
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 w-1/2">
-            <Select
-              value={resetDeviceXID || undefined}
-              onValueChange={setResetDeviceXID}
-              indicatorPosition="right"
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Pilih Terminal" />
-              </SelectTrigger>
-              <SelectContent className="w-full min-w-[16rem]">
-                {terminalOptions.map((item) => (
-                  <SelectItem key={item.XID} value={item.XID}>
-                    {`${(item.kd_user || '').toUpperCase()} [${
-                      item.TerminalID
-                    }]`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="flex flex-row justify-between">
-          <DialogClose asChild>
-            <Button variant="outline">Tutup</Button>
-          </DialogClose>
-          <Button
-            onClick={resetDeviceTerminal}
-            disabled={loading || !resetDeviceXID}
-          >
-            {loading ? (
-              <LoaderCircleIcon className="size-4 animate-spin" />
-            ) : (
-              'Reset Perangkat'
-            )}
-          </Button>
-        </div>
-      </div>
-    );
-  },
   ResetPasswordTerminalModalContent: ({ selected, closeModal }) => {
     const [loading, setLoading] = useState(false);
     const [merchantUser, setMerchantUser] = useState('');
 
-    const merchantUserOptions = (selected?.terminal ?? []).filter(
-      (item) => item?.TerminalID !== 'A01'
+    const merchantUserOptions = (selected?.merchantUser ?? []).filter(
+      (item) => item?.kd_user,
     );
 
     const resetPasswordTerminal = useCallback(async () => {
@@ -544,7 +410,7 @@ const ModalContents = {
         const session = AuthService.retrieveSession();
         if (!session || !session.kd_user) {
           throw new Error(
-            'Sesi pengguna tidak tersedia. Silakan login kembali.'
+            'Sesi pengguna tidak tersedia. Silakan login kembali.',
           );
         }
 
@@ -558,7 +424,7 @@ const ModalContents = {
       } catch (error) {
         console.error(
           'Gagal reset password:',
-          error?.response?.data?.errors ?? error
+          error?.response?.data?.errors ?? error,
         );
       } finally {
         setLoading(false);
@@ -610,9 +476,158 @@ const ModalContents = {
       </div>
     );
   },
+  ResetDeviceMerchantModalContent: ({ selected, closeModal }) => {
+    const [loading, setLoading] = useState(false);
+    const [resetDeviceXID, setResetDeviceXID] = useState('');
+    const [showForm, setShowForm] = useState(false);
+
+    const merchantUsersByKdUser = new Map(
+      (selected?.merchantUser ?? [])
+        .filter((item) => item?.kd_user)
+        .map((item) => [item.kd_user, item]),
+    );
+
+    const terminalOptions = (selected?.terminal ?? [])
+      .filter((item) => item?.TerminalID !== 'A01' && item?.kd_user)
+      .map((item) => {
+        const matchedMerchantUser = merchantUsersByKdUser.get(item.kd_user);
+        return {
+          ...item,
+          device: matchedMerchantUser?.device ?? matchedMerchantUser?.Device ?? '',
+        };
+      });
+
+    const resetDeviceTerminal = useCallback(async () => {
+      try {
+        setLoading(true);
+
+        if (!resetDeviceXID) throw new Error('Terminal harus dipilih');
+
+        const session = AuthService.retrieveSession();
+        if (!session || !session.kd_user) {
+          throw new Error(
+            'Sesi pengguna tidak tersedia. Silakan login kembali.',
+          );
+        }
+
+        await axiosInstance().post('/terminal/reset/device', {
+          kdUser: session.kd_user,
+          XID: resetDeviceXID,
+        });
+
+        // Close modal after successful request
+        closeModal();
+      } catch (error) {
+        console.error(
+          'Gagal mereset perangkat:',
+          error?.response?.data?.errors ?? error,
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, [resetDeviceXID, closeModal]);
+
+    return (
+      <div className="flex flex-col gap-5">
+        {!showForm ? (
+          <>
+            <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 flex flex-row gap-4 p-5 items-start">
+              <div className="flex-1 text-sm leading-relaxed">
+                <p>
+                  Reset Device diperuntuhkan bagi Perangkat Mobile yang telah
+                  terhubung dengan Aplikasi BSG Merchant Mobile.
+                </p>
+                <br />
+                <p>
+                  Terminal yang telah terhubung dengan perangkat dapat di reset
+                  oleh Admin, dimana Terminal tersebut dapat dipindahkan
+                  penggunaanya pada perangkat lain.
+                </p>
+                <br />
+                <p>
+                  Jika anda menyetujui proses reset perangkat. silahkan menekan
+                  tombol <span className="font-bold">'Lanjutkan'</span>
+                </p>
+              </div>
+              <div className="relative w-40 h-64 overflow-hidden rounded-lg">
+                <style>{`
+                  @keyframes slide-up-once {
+                    0% { transform: translateY(30%); opacity: 0; }
+                    100% { transform: translateY(0); opacity: 1; }
+                  }
+                `}</style>
+                <img
+                  src="/media/bsg/merchant_mobile.png"
+                  alt="Merchant Mobile"
+                  className="w-full h-auto object-cover drop-shadow-[0_8px_12px_rgba(0,0,0,0.35)]"
+                  style={{
+                    animation: 'slide-up-once 1.2s ease-out forwards',
+                  }}
+                />
+                <div className="absolute top-0 left-0 right-0 h-1/4 bg-gradient-to-b from-surface-50 dark:from-surface-950 to-transparent pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-surface-50 dark:from-surface-950 to-transparent pointer-events-none" />
+              </div>
+            </div>
+            <div className="flex flex-row justify-between">
+              <DialogClose asChild>
+                <Button variant="outline">Tutup</Button>
+              </DialogClose>
+              <Button
+                className="bg-green-700/60 hover:bg-green-600 text-white"
+                onClick={() => setShowForm(true)}
+              >
+                Lanjutkan
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 w-1/2">
+                <Select
+                  value={resetDeviceXID || undefined}
+                  onValueChange={setResetDeviceXID}
+                  indicatorPosition="right"
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih Terminal" />
+                  </SelectTrigger>
+                  <SelectContent className="w-full min-w-[16rem]">
+                    {terminalOptions.map((item) => (
+                      <SelectItem key={item.XID} value={item.XID}>
+                        {`[${item.TerminalID}] ${(item.kd_user || '').toUpperCase()} ${item.device ? ` • ${item.device}` : ''}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex flex-row justify-between">
+              <DialogClose asChild>
+                <Button variant="outline">Tutup</Button>
+              </DialogClose>
+              <Button
+                onClick={resetDeviceTerminal}
+                disabled={loading || !resetDeviceXID}
+              >
+                {loading ? (
+                  <LoaderCircleIcon className="size-4 animate-spin" />
+                ) : (
+                  'Reset Perangkat'
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 };
 
 function buildActionsMenu(row, openModal) {
+  const merchantUsers = row?.original?.merchantUser ?? [];
+  const hasMerchantUser = merchantUsers.some((item) => item?.kd_user);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -633,22 +648,26 @@ function buildActionsMenu(row, openModal) {
           onClick={() => openModal('AddDeviceModalContent', row)}
         >
           <UserRoundPlusIcon />
-          <span>Tambah Perangkat</span>
+          <span>Tambah Terminal</span>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          className="cursor-pointer"
-          onClick={() => openModal('ResetTerminalModalContent', row)}
-        >
-          <UserRoundPen />
-          <span>Reset Perangkat</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="cursor-pointer"
-          onClick={() => openModal('ResetPasswordTerminalModalContent', row)}
-        >
-          <UserRoundMinus />
-          <span>Reset User Password</span>
-        </DropdownMenuItem>
+        {hasMerchantUser && (
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => openModal('ResetPasswordTerminalModalContent', row)}
+          >
+            <UserRoundMinus />
+            <span>Reset Password Terminal</span>
+          </DropdownMenuItem>
+        )}
+        {hasMerchantUser && (
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => openModal('ResetDeviceMerchantModalContent', row)}
+          >
+            <UserRoundPen />
+            <span>Reset Device Mobile</span>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -933,16 +952,16 @@ export function OutletPage() {
         description:
           'Ikuti langkah untuk menambahkan perangkat baru pada outlet terpilih.',
       },
-      ResetTerminalModalContent: {
-        title: 'Reset Perangkat',
-        description: 'Pilih terminal perangkat yang akan direset.',
-      },
       ResetPasswordTerminalModalContent: {
         title: 'Reset User Password',
-        description: 'Pilih Merchant User untuk melakukan reset password.',
+        description: 'Pilih Terminal untuk melakukan reset password.',
       },
+      ResetDeviceMerchantModalContent: {
+        title: 'Reset Perangkat',
+        description: 'Pilih Terminal yang digunakan pada Perangkat',
+      }
     }),
-    []
+    [],
   );
 
   const { title: currentDialogTitle, description: currentDialogDescription } =
