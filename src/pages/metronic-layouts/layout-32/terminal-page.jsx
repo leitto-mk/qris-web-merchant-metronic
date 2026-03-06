@@ -302,9 +302,9 @@ export function Layout32Page() {
               <div className="flex 2xl:flex-row flex-col md:flex-row gap-7 my-5">
                 {/* QR IMAGE (show only when available) */}
                 {hasQR && (
-                  <div className="flex flex-col md:basis-2/6 gap-1">
+                  <div className="flex flex-col md:basis-2/6 gap-3">
                     <div className="group/overlay relative h-full">
-                      <div className="absolute inset-0 rounded-xl bg-black/50 flex items-center justify-center opacity-0 group-hover/overlay:opacity-100 transition-opacity duration-300">
+                      <div className="absolute inset-0 rounded-xl bg-black/50 items-center justify-center opacity-0 transition-opacity duration-300 hidden lg:flex group-hover/overlay:opacity-100">
                         <Button
                           className="text-xs md:text-sm xl:text-base"
                           variant="outline"
@@ -320,6 +320,14 @@ export function Layout32Page() {
                         alt="Qris-Image"
                       />
                     </div>
+
+                    <Button
+                      className="w-full lg:hidden"
+                      variant="outline"
+                      onClick={() => ImagePrintService.base64(outlet?.qris?.qr_base64)}
+                    >
+                      Print / Download
+                    </Button>
                   </div>
                 )}
 
