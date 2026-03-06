@@ -57,7 +57,7 @@ export function LoginPage() {
     setInvalid(false);
     setLoading(true);
     try {
-      await AuthService.login({ username: values.username, password: values.password });
+      await AuthService.login({ username: values.username.toUpperCase(), password: values.password });
       navigate('/terminal/outlet');
     } catch (e) {
       setInvalid(true);
