@@ -675,207 +675,279 @@ function buildActionsMenu(row, openModal) {
 
 function buildExpandedDetails(merchant, data) {
   return (
-    <div className="flex flex-col 2xl:flex-row gap-10 m-5">
-      {/* QR IMAGE */}
-      <div className="mx-auto 2xl:mx-0 flex flex-col gap-1 flex-shrink-0">
-        <div className="group/overlay relative">
-          <div className="absolute inset-0 rounded-xl bg-black/50 flex items-center justify-center opacity-0 group-hover/overlay:opacity-100 transition-opacity duration-300">
-            <Button
-              className="text-xs md:text-sm xl:text-base"
-              variant="outline"
-              onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}
-            >
-              Print / Download
-            </Button>
-          </div>
-          <img
-            src={data?.qris?.qr_base64}
-            aria-label="QRIS Image"
-            className="w-[13rem] md:w-[15rem] xl:w-[18rem] 2xl:w-[19rem] object-contain rounded-xl"
-            alt="Qris-Image"
-          />
-        </div>
-      </div>
+    <div className="m-3 md:m-4 xl:m-5">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 xl:gap-5">
+        {/* QR IMAGE */}
+        <div className="xl:col-span-3">
+          <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-background to-muted/20 shadow-sm overflow-hidden h-full">
+            <div className="flex items-center justify-between gap-3 border-b border-dashed px-4 py-3">
+              <div className="min-w-0">
+                <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  QRIS Preview
+                </div>
+                <div className="text-sm font-semibold uppercase truncate">
+                  {data.outlatName || 'Outlet'}
+                </div>
+              </div>
+              <Badge variant="secondary" className="uppercase shrink-0">
+                {data.nmid || '-'}
+              </Badge>
+            </div>
 
-      {/* RIGHT SECTION */}
-      <div className="flex flex-col gap-5">
-        {/* OUTLET INFOS */}
-        <div className="flex flex-col 2xl:flex-row gap-5">
-          {/* LEFT CARD */}
+            <div className="p-4">
+              <div className="group/overlay relative flex items-center justify-center rounded-2xl bg-white ring-1 ring-black/5 shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-3 min-h-[16rem] md:min-h-[18rem] xl:min-h-[20rem]">
+                <div className="absolute inset-0 rounded-2xl bg-black/45 items-center justify-center opacity-0 transition-opacity duration-300 hidden lg:flex group-hover/overlay:opacity-100">
+                  <Button
+                    className="text-xs md:text-sm"
+                    variant="outline"
+                    onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}
+                  >
+                    Print / Download
+                  </Button>
+                </div>
+                <img
+                  src={data?.qris?.qr_base64}
+                  aria-label="QRIS Image"
+                  className="w-full max-w-[11rem] md:max-w-[13rem] xl:max-w-[15rem] h-auto object-contain rounded-xl"
+                  alt="Qris-Image"
+                />
+              </div>
+
+              <Button
+                className="mt-4 w-full lg:hidden"
+                variant="outline"
+                onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}
+              >
+                Print / Download
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* OUTLET INFO */}
+        <div className="xl:col-span-4">
           <Card
-            className="inline-block w-[50rem] 2xl:w-[35rem]"
+            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm h-full"
             variant="accent"
           >
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardHeading>
-                <div className="font-bold uppercase">Outlet Info</div>
+                <div className="font-bold uppercase tracking-wide">
+                  Outlet Info
+                </div>
               </CardHeading>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Cabang</span>
+            <CardContent className="pt-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Cabang</span>
                 <Badge>{data.branchInfo.ket}</Badge>
               </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Nama Merchant</span>
-                <span className="uppercase">{merchant.MRCName}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Nama Merchant</span>
+                <span className="uppercase sm:text-right max-w-full sm:max-w-[60%] break-words">
+                  {merchant.MRCName}
+                </span>
               </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Nama Outlet</span>
-                <span className="uppercase">{data.outlatName}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Nama Outlet</span>
+                <span className="uppercase sm:text-right max-w-full sm:max-w-[60%] break-words">
+                  {data.outlatName}
+                </span>
               </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Tipe Usaha</span>
-                <span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Tipe Usaha</span>
+                <span className="sm:text-right">
                   {data.tipe_usaha === 'INDIVIDU'
                     ? 'INDIVIDU'
                     : 'BADAN USAHA'}
                 </span>
               </div>
               {data.tipe_usaha === 'BADAN_USAHA' && (
-                <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                  <span>Institusi</span>
-                  <span>{data.nama_institusi || '-'}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                  <span className="text-muted-foreground">Institusi</span>
+                  <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
+                    {data.nama_institusi || '-'}
+                  </span>
                 </div>
               )}
               {data.tipe_usaha === 'BADAN_USAHA' &&
                 data.kategori === 'PEMDA' && (
-                  <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                    <span>PEMDA</span>
-                    <span>{data.pemda || '-'}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                    <span className="text-muted-foreground">PEMDA</span>
+                    <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
+                      {data.pemda || '-'}
+                    </span>
                   </div>
                 )}
               {data.tipe_usaha === 'BADAN_USAHA' &&
                 data.kategori === 'PEMDA' && (
-                  <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                    <span>DINAS</span>
-                    <span>{data.dinas || '-'}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                    <span className="text-muted-foreground">DINAS</span>
+                    <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
+                      {data.dinas || '-'}
+                    </span>
                   </div>
                 )}
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Kategori</span>
-                <span>{data.kategori || '-'}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Kategori</span>
+                <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
+                  {data.kategori || '-'}
+                </span>
               </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Kriteria Merchant</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Kriteria Merchant</span>
                 <Badge>{data.kriteria}</Badge>
               </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>MCC</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">MCC</span>
                 <Badge variant="secondary">{data.mcc || '-'}</Badge>
               </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>MPAN</span>
-                <span>{data.MPAN || '-'}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">MPAN</span>
+                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
+                  {data.MPAN || '-'}
+                </span>
               </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>MID</span>
-                <span>{data.MID || '-'}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">MID</span>
+                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
+                  {data.MID || '-'}
+                </span>
               </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>NMID</span>
-                <span>{data.nmid || '-'}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* RIGHT CARD */}
-          <Card
-            className="inline-block w-[50rem] 2xl:w-[35rem]"
-            variant="accent"
-          >
-            <CardHeader>
-              <CardHeading>
-                <div className="font-bold uppercase">Informasi Pemilik</div>
-              </CardHeading>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Alamat</span>
-                <span
-                  label="Alamat"
-                >{`${data.outlatAddress}, ${data.kota} ${data.kdPost}`}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>KTP</span>
-                <span label="KTP">{data.ktp ?? '-'}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>NPWP</span>
-                <span>{data.npwp ?? '-'}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>No. HP</span>
-                <span>{data.phonenum}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Email</span>
-                <span>{data.email}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Legalitas Usaha</span>
-                <span>{data.legalitas_usaha}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>No. Legalitas Usaha</span>
-                <span>{data.no_legalitas_usaha ?? '-'}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>No. Rekening</span>
-                <span>{data.acc_no}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                <span>Nama Pemilik Rekening</span>
-                <span>{data.acc_name}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">NMID</span>
+                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
+                  {data.nmid || '-'}
+                </span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="w-[50rem] 2xl:w-[30rem]" variant="accent">
-          <CardHeader>
-            <CardHeading>
-              <div className="font-bold uppercase">Terminals</div>
-            </CardHeading>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {/* TERMINAL LIST */}
-            <div className="flex flex-row gap-4">
-              <div className="flex font-bold w-2/5">Terminal</div>
-
-              <div className="flex flex-wrap gap-2">
-                {data.terminal.map((terminal) => (
-                  <Badge
-                    value={terminal.TerminalID}
-                    variant="secondary"
-                    size="lg"
-                  >
-                    {terminal.TerminalID}
-                  </Badge>
-                ))}
+        {/* OWNER INFO */}
+        <div className="xl:col-span-5">
+          <Card
+            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm h-full"
+            variant="accent"
+          >
+            <CardHeader className="pb-3">
+              <CardHeading>
+                <div className="font-bold uppercase tracking-wide">
+                  Informasi Pemilik
+                </div>
+              </CardHeading>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Alamat</span>
+                <span className="sm:text-right break-words max-w-full sm:max-w-[65%]">
+                  {`${data.outlatAddress}, ${data.kota} ${data.kdPost}`}
+                </span>
               </div>
-            </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">KTP</span>
+                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
+                  {data.ktp ?? '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">NPWP</span>
+                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
+                  {data.npwp ?? '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">No. HP</span>
+                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
+                  {data.phonenum}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Email</span>
+                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
+                  {data.email}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Legalitas Usaha</span>
+                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
+                  {data.legalitas_usaha}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">No. Legalitas Usaha</span>
+                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
+                  {data.no_legalitas_usaha ?? '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">No. Rekening</span>
+                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
+                  {data.acc_no}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Nama Pemilik Rekening</span>
+                <span className="sm:text-right break-words max-w-full sm:max-w-[65%]">
+                  {data.acc_name}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* MERCHANT USERS */}
-            <div className="flex flex-row gap-4">
-              <div className="flex font-bold w-2/5">Merchant User</div>
-
-              <div className="flex flex-wrap gap-2">
-                {data.terminal
-                  .filter((t) => t.TerminalID !== 'A01')
-                  .map((t) => (
+        {/* TERMINALS */}
+        <div className="xl:col-span-12">
+          <Card
+            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm"
+            variant="accent"
+          >
+            <CardHeader className="pb-3">
+              <CardHeading>
+                <div className="font-bold uppercase tracking-wide">
+                  Terminals
+                </div>
+              </CardHeading>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-5 pt-3">
+              <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+                <div className="font-bold md:w-36 text-muted-foreground shrink-0">
+                  Terminal
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {data.terminal.map((terminal) => (
                     <Badge
-                      className="uppercase"
+                      value={terminal.TerminalID}
                       variant="secondary"
                       size="lg"
                     >
-                      {t.kd_user}
+                      {terminal.TerminalID}
                     </Badge>
                   ))}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+
+              <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+                <div className="font-bold md:w-36 text-muted-foreground shrink-0">
+                  Merchant User
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {data.terminal
+                    .filter((t) => t.TerminalID !== 'A01')
+                    .map((t) => (
+                      <Badge
+                        className="uppercase"
+                        variant="secondary"
+                        size="lg"
+                      >
+                        {t.kd_user}
+                      </Badge>
+                    ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
@@ -883,7 +955,7 @@ function buildExpandedDetails(merchant, data) {
 
 function OutletPageSkeleton() {
   return (
-    <div className="my-2 mx-8 flex flex-wrap gap-5">
+    <div className="mx-auto my-2 flex w-full max-w-[1600px] flex-wrap gap-5 px-3 md:px-4 xl:px-5 2xl:px-6">
       <Card className="w-full">
         <CardHeader className="py-3.5">
           <CardTitle>
@@ -892,7 +964,7 @@ function OutletPageSkeleton() {
         </CardHeader>
         <CardTable>
           <div className="divide-y">
-            <div className="flex items-center justify-between p-5 text-sm font-medium text-muted-foreground">
+            <div className="flex items-center justify-between p-4 xl:p-5 text-sm font-medium text-muted-foreground">
               <Skeleton className="h-5 w-1/6" />
               <Skeleton className="h-5 w-1/6" />
               <Skeleton className="h-5 w-1/6" />
@@ -901,7 +973,7 @@ function OutletPageSkeleton() {
               <Skeleton className="h-5 w-1/6" />
             </div>
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-5">
+              <div key={i} className="flex items-center justify-between p-4 xl:p-5">
                 <Skeleton className="h-8 w-1/6" />
                 <Skeleton className="h-8 w-1/6" />
                 <Skeleton className="h-8 w-1/6" />
@@ -1113,7 +1185,6 @@ export function OutletPage() {
         cell: ({ row }) => {
           return row.getCanExpand() ? buildActionsMenu(row, openModal) : null;
         },
-        // Make the Actions column fit its content (no wrapping and minimal width)
         meta: {
           headerClassName: 'whitespace-nowrap w-0',
           cellClassName: 'whitespace-nowrap w-0',
@@ -1147,12 +1218,12 @@ export function OutletPage() {
   }
 
   return (
-    <div className="my-2 mx-8 flex flex-wrap gap-5">
+    <div className="mx-auto my-2 flex w-full max-w-[1600px] flex-wrap gap-5 px-3 md:px-4 xl:px-5 2xl:px-6">
       <DataGrid
         table={table}
         recordCount={outlets?.length || 0}
         tableClassNames={{
-          edgeCell: 'px-5',
+          edgeCell: 'px-3 md:px-4 xl:px-5',
         }}
         tableLayout={{
           columnsPinnable: true,
@@ -1161,7 +1232,7 @@ export function OutletPage() {
           columnsVisibility: true,
         }}
       >
-        <Card>
+        <Card className="w-full rounded-2xl border border-border/60 shadow-sm">
           <CardHeader className="py-3.5">
             <CardTitle>Daftar Outlet</CardTitle>
           </CardHeader>
@@ -1188,7 +1259,7 @@ export function OutletPage() {
           }
         }}
       >
-        <DialogContent className="max-w-[800px] flex flex-col gap-5">
+        <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-[1200px] flex-col gap-5 overflow-y-auto">
           <DialogTitle>{currentDialogTitle}</DialogTitle>
           <DialogDescription>{currentDialogDescription}</DialogDescription>
           {(() => {
