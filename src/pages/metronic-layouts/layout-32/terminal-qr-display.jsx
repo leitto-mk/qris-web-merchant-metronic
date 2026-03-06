@@ -1,6 +1,5 @@
-
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import QRCode from 'react-qr-code';
+import QRCode from 'qrcode';
 
 // Public assets (placed under /public). Use absolute paths so they work in a popup window, too.
 const QRIS_LOGO = '/media/bsg/qris-logo-dark.png';
@@ -20,6 +19,7 @@ export function TerminalQRDisplay() {
 
   const [formattedTime, setFormattedTime] = useState('00:00');
   const [formattedTimeSeverity, setFormattedTimeSeverity] = useState('text-gray-800');
+  const [qrSrc, setQrSrc] = useState('');
   const endTimeRef = useRef(null);
   const intervalRef = useRef(null);
 
@@ -64,18 +64,15 @@ export function TerminalQRDisplay() {
         const ss = String(seconds).padStart(2, '0');
         setFormattedTime(`${mm}:${ss}`);
       } else {
-        // Expired
         setPayment((prev) => ({ ...prev, display: false }));
         clearTimer();
       }
     };
 
-    // Start immediately and then each second
     tick();
     intervalRef.current = setInterval(tick, 1000);
   }, []);
 
-  // Unified handler for incoming payloads (BroadcastChannel or storage fallback)
   const handleIncoming = useCallback(
     (raw) => {
       const data = raw || {};
@@ -95,7 +92,6 @@ export function TerminalQRDisplay() {
     [startNewCountdown]
   );
 
-  // Listen for broadcast messages from the terminal page
   useEffect(() => {
     let channel;
     try {
@@ -104,11 +100,9 @@ export function TerminalQRDisplay() {
         handleIncoming(event?.data || {});
       };
     } catch (e) {
-      // BroadcastChannel may not be supported in older browsers
       console.error('BroadcastChannel error:', e?.message || e);
     }
 
-    // Fallback via localStorage events for environments without BroadcastChannel
     const onStorage = (e) => {
       if (e?.key !== 'bsgqr-payment-sync' || !e.newValue) return;
       try {
@@ -133,11 +127,11 @@ export function TerminalQRDisplay() {
     };
   }, [handleIncoming]);
 
-  // Reset fields when display is turned off (to mimic Vue watcher behavior)
   useEffect(() => {
     if (!payment.display) {
       clearTimer();
       setFormattedTime('00:00');
+      setQrSrc('');
       setPayment((prev) => ({
         ...prev,
         currentTime: null,
@@ -149,12 +143,39 @@ export function TerminalQRDisplay() {
     }
   }, [payment.display]);
 
-  // Build a QR presentation. Prefer native data if provided as base64; otherwise, use an on-the-fly QR image service.
-  const qrElement = useMemo(() => {
-    if (!payment?.qr) return null;
+  useEffect(() => {
+    let cancelled = false;
 
-    return <QRCode value={payment.qr || ''} level="H" size={200} />;
-  }, [payment?.qr]);
+    const buildQrImage = async () => {
+      if (!payment?.qr || !payment?.display) {
+        setQrSrc('');
+        return;
+      }
+
+      try {
+        const nextQrSrc = await QRCode.toDataURL(payment.qr, {
+          errorCorrectionLevel: 'L',
+          width: 200,
+          margin: 1,
+        });
+
+        if (!cancelled) {
+          setQrSrc(nextQrSrc);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setQrSrc('');
+        }
+        console.error(e?.message || e);
+      }
+    };
+
+    buildQrImage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [payment?.qr, payment?.display]);
 
   return (
     <div className="flex flex-row justify-center py-20 min-h-screen w-full bg-slate-900">
@@ -170,7 +191,9 @@ export function TerminalQRDisplay() {
           <div className="flex flex-row mb-5">
             <div className="text-center basis-1/12">
               <img src={QRIS_LOGO} alt="qris-logo" />
-              <div className="inline-block bg-white">{qrElement}</div>
+              <div className="inline-block bg-white">
+                {qrSrc ? <img src={qrSrc} alt="QR Code" className="w-[200px] h-[200px]" /> : null}
+              </div>
               <div className="text-md text-gray-900 mt-2">NMID: {payment.nmid}</div>
             </div>
             <div className="flex flex-col text-center justify-center basis-11/12">

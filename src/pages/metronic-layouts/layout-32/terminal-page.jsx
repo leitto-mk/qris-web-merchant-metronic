@@ -12,7 +12,7 @@ import { useAppData } from '@/context/AppDataContext.jsx';
 import { Card, CardContent, CardHeader, CardHeading } from '@/components/ui/card.jsx';
 import ImagePrintService from '@/services/ImagePrintService.js';
 import { useState, useCallback, useEffect } from 'react';
-import QRCode from 'react-qr-code';
+import QRCode from 'qrcode';
 import { LoaderCircleIcon, RotateCcw, X } from 'lucide-react';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
 import QRService from '@/services/QRService.js';
@@ -36,6 +36,7 @@ export function Layout32Page() {
     amount: 0,
     display: null,
   });
+  const [paymentQrSrc, setPaymentQrSrc] = useState('');
 
   // Amount input state (formatted and numeric)
   const [amount, setAmount] = useState('');
@@ -145,16 +146,24 @@ export function Layout32Page() {
         tipPersen: '0',
       };
 
+      const qrValue = QRService.toTLV(JSONData);
+      const qrSrc = await QRCode.toDataURL(qrValue, {
+        errorCorrectionLevel: 'L',
+        width: 200,
+        margin: 1,
+      });
+
       const newPayment = {
         currentTime: moment().format('YYYY-MM-DD HH:mm'),
         outlet: outlet?.outlatName,
-        qr: QRService.toTLV(JSONData),
+        qr: qrValue,
         nmid: outlet?.nmid,
         expiresInMs: 180000,
         amount: amountNumber,
         display: true,
       };
 
+      setPaymentQrSrc(qrSrc);
       setPayment(newPayment);
       startNewCountDown(newPayment.expiresInMs);
       broadcastPayment(newPayment);
@@ -226,7 +235,7 @@ export function Layout32Page() {
     return () => {
       clearTimer();
     };
-  }, [clearTimer]);
+  }, [payment?.qr, payment?.display]);
 
   // Wait for app context data ready before rendering/using it
   if (appLoading) {
@@ -537,7 +546,7 @@ export function Layout32Page() {
                             <div className="text-center basis-1/12">
                               <img src={QRIS_LOGO} alt="qris-logo" />
                               <div className="inline-block bg-white">
-                                <QRCode value={payment.qr || ''} level="H" size={200} />
+                                {paymentQrSrc ? <img src={paymentQrSrc} alt="QR Code" className="w-[200px] h-[200px]" /> : null}
                               </div>
                               <div className="text-md text-gray-900 mt-2">NMID: {payment.nmid}</div>
                             </div>
