@@ -1,24 +1,19 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useAppData } from '@/context/AppDataContext.jsx';
+import { LoaderCircleIcon, RotateCcw, X } from 'lucide-react';
+import moment from 'moment';
+import QRCode from 'qrcode';
+import AuthService from '@/services/AuthService.js';
+import axiosInstance from '@/services/AxiosInstance.js';
+import ImagePrintService from '@/services/ImagePrintService.js';
+import QRService from '@/services/QRService.js';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { Skeleton } from '@/components/ui/skeleton.jsx';
-import {
-  Toolbar,
-  ToolbarActions,
-  ToolbarDescription,
-  ToolbarHeading,
-  ToolbarPageTitle,
-} from '@/components/layouts/layout-32/components/toolbar.jsx';
-import { useAppData } from '@/context/AppDataContext.jsx';
 import { Card, CardContent, CardHeader, CardHeading } from '@/components/ui/card.jsx';
-import ImagePrintService from '@/services/ImagePrintService.js';
-import { useState, useCallback, useEffect } from 'react';
-import QRCode from 'qrcode';
-import { LoaderCircleIcon, RotateCcw, X } from 'lucide-react';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
-import QRService from '@/services/QRService.js';
-import axiosInstance from '@/services/AxiosInstance.js';
-import moment from 'moment';
-import AuthService from '@/services/AuthService.js';
+import { Skeleton } from '@/components/ui/skeleton.jsx';
+import { Toolbar, ToolbarActions, ToolbarDescription, ToolbarHeading, ToolbarPageTitle } from '@/components/layouts/layout-32/components/toolbar.jsx';
+
 
 export function Layout32Page() {
   const { merchant, outlets, loading: appLoading } = useAppData();
@@ -149,7 +144,7 @@ export function Layout32Page() {
       const qrValue = QRService.toTLV(JSONData);
       const qrSrc = await QRCode.toDataURL(qrValue, {
         errorCorrectionLevel: 'L',
-        width: 200,
+        width: 800,
         margin: 1,
       });
 
@@ -280,17 +275,28 @@ export function Layout32Page() {
               <ToolbarPageTitle>{merchant.MRCName}</ToolbarPageTitle>
             </div>
             <ToolbarDescription>
-              <Badge size="md" appearance="light" variant="success" className="uppercase">
+              <Badge
+                size="md"
+                appearance="light"
+                variant="success"
+                className="uppercase"
+              >
                 {session?.kd_user || 'N/A'}
               </Badge>
               {outlet?.nmid}
             </ToolbarDescription>
           </ToolbarHeading>
           <ToolbarActions>
-            <Button variant={tab === 'outlet' ? 'mono' : 'outline'} onClick={() => setTab('outlet')}>
+            <Button
+              variant={tab === 'outlet' ? 'mono' : 'outline'}
+              onClick={() => setTab('outlet')}
+            >
               Outlet
             </Button>
-            <Button variant={tab === 'transaksi' ? 'mono' : 'outline'} onClick={() => setTab('transaksi')}>
+            <Button
+              variant={tab === 'transaksi' ? 'mono' : 'outline'}
+              onClick={() => setTab('transaksi')}
+            >
               Transaksi
             </Button>
           </ToolbarActions>
@@ -301,7 +307,8 @@ export function Layout32Page() {
         <Skeleton
           className="rounded-lg grow h-[calc(100vh-10rem)] mt-10 mb-5 border border-dashed border-input bg-background text-subtle-stroke relative text-border"
           style={{
-            backgroundImage: 'repeating-linear-gradient(125deg, transparent, transparent 5px, currentcolor 5px, currentcolor 6px)',
+            backgroundImage:
+              'repeating-linear-gradient(125deg, transparent, transparent 5px, currentcolor 5px, currentcolor 6px)',
           }}
         ></Skeleton>
       ) : (
@@ -317,7 +324,9 @@ export function Layout32Page() {
                         <Button
                           className="text-xs md:text-sm xl:text-base"
                           variant="outline"
-                          onClick={() => ImagePrintService.base64(outlet?.qris?.qr_base64)}
+                          onClick={() =>
+                            ImagePrintService.base64(outlet?.qris?.qr_base64)
+                          }
                         >
                           Print / Download
                         </Button>
@@ -333,7 +342,9 @@ export function Layout32Page() {
                     <Button
                       className="w-full lg:hidden"
                       variant="outline"
-                      onClick={() => ImagePrintService.base64(outlet?.qris?.qr_base64)}
+                      onClick={() =>
+                        ImagePrintService.base64(outlet?.qris?.qr_base64)
+                      }
                     >
                       Print / Download
                     </Button>
@@ -341,7 +352,9 @@ export function Layout32Page() {
                 )}
 
                 {/* OUTLET INFOS */}
-                <div className={`flex flex-col 2xl:flex-row gap-5 ${hasQR ? 'md:basis-4/6' : 'basis-full'}`}>
+                <div
+                  className={`flex flex-col 2xl:flex-row gap-5 ${hasQR ? 'md:basis-4/6' : 'basis-full'}`}
+                >
                   {/* LEFT CARD */}
                   <Card className="inline-block w-full h-full" variant="accent">
                     <CardHeader>
@@ -360,7 +373,11 @@ export function Layout32Page() {
                       </div>
                       <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                         <span>Tipe Usaha</span>
-                        <span>{outlet?.tipe_usaha === 'INDIVIDU' ? 'INDIVIDU' : 'BADAN USAHA'}</span>
+                        <span>
+                          {outlet?.tipe_usaha === 'INDIVIDU'
+                            ? 'INDIVIDU'
+                            : 'BADAN USAHA'}
+                        </span>
                       </div>
                       {outlet?.tipe_usaha === 'BADAN_USAHA' && (
                         <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
@@ -368,18 +385,20 @@ export function Layout32Page() {
                           <span>{outlet?.nama_institusi || '-'}</span>
                         </div>
                       )}
-                      {outlet?.tipe_usaha === 'BADAN_USAHA' && outlet?.kategori === 'PEMDA' && (
-                        <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                          <span>PEMDA</span>
-                          <span>{outlet?.pemda || '-'}</span>
-                        </div>
-                      )}
-                      {outlet?.tipe_usaha === 'BADAN_USAHA' && outlet?.kategori === 'PEMDA' && (
-                        <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
-                          <span>DINAS</span>
-                          <span>{outlet?.dinas || '-'}</span>
-                        </div>
-                      )}
+                      {outlet?.tipe_usaha === 'BADAN_USAHA' &&
+                        outlet?.kategori === 'PEMDA' && (
+                          <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
+                            <span>PEMDA</span>
+                            <span>{outlet?.pemda || '-'}</span>
+                          </div>
+                        )}
+                      {outlet?.tipe_usaha === 'BADAN_USAHA' &&
+                        outlet?.kategori === 'PEMDA' && (
+                          <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
+                            <span>DINAS</span>
+                            <span>{outlet?.dinas || '-'}</span>
+                          </div>
+                        )}
                       <div className="flex items-center justify-between gap-2 py-2 border-b border-dashed last:border-none">
                         <span>Kategori</span>
                         <span>{outlet?.kategori || '-'}</span>
@@ -419,11 +438,15 @@ export function Layout32Page() {
                 <div className="card flex flex-col gap-4">
                   {!payment?.display ? (
                     <>
-                      <div className="font-semibold text-xl xl:text-2xl 2xl:text-3xl">Masukan Nominal</div>
+                      <div className="font-semibold text-xl xl:text-2xl 2xl:text-3xl">
+                        Masukan Nominal
+                      </div>
                       <div className="flex flex-row items-start justify-center gap-4">
                         <div className="w-96 xl:w-[28rem] 2xl:w-[32rem]">
                           <InputWrapper className="h-12 xl:h-16 2xl:h-20 border-xl">
-                            <span className="font-semibold text-lg xl:text-xl 2xl:text-2xl">Rp.&nbsp;&nbsp;</span>
+                            <span className="font-semibold text-lg xl:text-xl 2xl:text-2xl">
+                              Rp.&nbsp;&nbsp;
+                            </span>
                             <Input
                               className="text-white font-semibold uppercase text-lg xl:text-xl 2xl:text-2xl"
                               variant="lg"
@@ -438,7 +461,17 @@ export function Layout32Page() {
                           {/* Keypad */}
                           <div className="mt-4 select-none">
                             <div className="grid grid-cols-3 gap-2 xl:gap-4">
-                              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+                              {[
+                                '1',
+                                '2',
+                                '3',
+                                '4',
+                                '5',
+                                '6',
+                                '7',
+                                '8',
+                                '9',
+                              ].map((digit) => (
                                 <Button
                                   size="lg"
                                   key={digit}
@@ -537,27 +570,44 @@ export function Layout32Page() {
                         <div className="flex flex-col justify-center w-auto shadow-lg pt-5 pl-5 pb-5 border-2 border-dashed border-rose-600 bg-white rounded-3xl">
                           {/* HEADER */}
                           <div className="flex flex-col text-center">
-                            <h2 className="text-3xl font-extrabold text-slate-800">{payment.outlet}</h2>
-                            <p className="text-xl font-bold text-gray-700">{payment.currentTime}</p>
+                            <h2 className="text-3xl font-extrabold text-slate-800">
+                              {payment.outlet}
+                            </h2>
+                            <p className="text-xl font-bold text-gray-700">
+                              {payment.currentTime}
+                            </p>
                           </div>
 
                           {/* QR IMAGE*/}
-                          <div className="flex flex-row mb-5">
-                            <div className="text-center basis-1/12">
+                          <div className="flex flex-row gap-5 mb-5">
+                            <div className="text-center basis-1/12 ml-3">
                               <img src={QRIS_LOGO} alt="qris-logo" />
-                              <div className="inline-block bg-white">
-                                {paymentQrSrc ? <img src={paymentQrSrc} alt="QR Code" className="w-[200px] h-[200px]" /> : null}
+                              <div className="bg-white w-[300px]">
+                                {paymentQrSrc ? (
+                                  <img src={paymentQrSrc} alt="QR Code" />
+                                ) : null}
                               </div>
-                              <div className="text-md text-gray-900 mt-2">NMID: {payment.nmid}</div>
+                              <div className="text-md text-gray-900 mt-2">
+                                NMID: {payment.nmid}
+                              </div>
                             </div>
-                            <div className="flex flex-col text-center justify-center basis-11/12">
-                              <p className="text-xl font-bold text-gray-500">Pembayaran</p>
-                              <p className="text-4xl font-bold text-gray-800 mb-3">
-                                Rp. {new Intl.NumberFormat('id-ID').format(payment?.amount || 0)}
+                            <div className="flex flex-col text-center justify-center basis-11/12 m-20">
+                              <p className="text-2xl font-bold text-gray-600">
+                                Pembayaran
+                              </p>
+                              <p className="text-5xl font-bold text-gray-800 mb-3">
+                                Rp.{' '}
+                                {new Intl.NumberFormat('id-ID').format(
+                                  payment?.amount || 0,
+                                )}
                               </p>
                               <div className="flex flex-row justify-center gap-1">
                                 <i className="text-xl pi pi-clock text-gray-800"></i>
-                                <p className={`text-xl font-bold ${formattedTimeSeverity}`}>{formattedTime}</p>
+                                <p
+                                  className={`text-xl font-bold ${formattedTimeSeverity}`}
+                                >
+                                  {formattedTime}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -566,7 +616,9 @@ export function Layout32Page() {
                         {/* BUTTON DISPLAY */}
                         <div className="flex flex-wrap h-14 justify-center">
                           <Button
-                            className={'bg-red-900 hover:bg-red-500 xl:h-16 2xl:h-20 xl:text-xl 2xl:text-2xl'}
+                            className={
+                              'bg-red-900 hover:bg-red-500 xl:h-16 2xl:h-20 xl:text-xl 2xl:text-2xl'
+                            }
                             size="lg"
                             onClick={finishPayment}
                           >

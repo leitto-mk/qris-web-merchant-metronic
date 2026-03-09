@@ -155,8 +155,8 @@ export function TerminalQRDisplay() {
       try {
         const nextQrSrc = await QRCode.toDataURL(payment.qr, {
           errorCorrectionLevel: 'L',
-          width: 200,
-          margin: 1,
+          width: 300,
+          margin: 0,
         });
 
         if (!cancelled) {
@@ -188,17 +188,19 @@ export function TerminalQRDisplay() {
           </div>
 
           {/* QR IMAGE*/}
-          <div className="flex flex-row mb-5">
-            <div className="text-center basis-1/12">
+          <div className="flex flex-row gap-5 mb-5">
+            <div className="text-center basis-1/12 ml-3">
               <img src={QRIS_LOGO} alt="qris-logo" />
-              <div className="inline-block bg-white">
-                {qrSrc ? <img src={qrSrc} alt="QR Code" className="w-[200px] h-[200px]" /> : null}
+              <div className="bg-white w-[300px]">
+                {qrSrc ? <img src={qrSrc} alt="QR Code" /> : null}
               </div>
               <div className="text-md text-gray-900 mt-2">NMID: {payment.nmid}</div>
             </div>
-            <div className="flex flex-col text-center justify-center basis-11/12">
-              <p className="text-xl font-bold text-gray-500">Pembayaran</p>
-              <p className="text-4xl font-bold text-gray-800 mb-3">Rp. {formattedAmount}</p>
+            <div className="flex flex-col text-center justify-center basis-11/12 m-20">
+              <p className="text-2xl font-bold text-gray-600">Pembayaran</p>
+              <p className="text-5xl font-bold text-gray-800 mb-3">
+                Rp. {new Intl.NumberFormat('id-ID').format(payment?.amount || 0)}
+              </p>
               <div className="flex flex-row justify-center gap-1">
                 <i className="text-xl pi pi-clock text-gray-800"></i>
                 <p className={`text-xl font-bold ${formattedTimeSeverity}`}>{formattedTime}</p>
