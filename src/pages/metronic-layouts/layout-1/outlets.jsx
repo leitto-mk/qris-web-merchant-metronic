@@ -627,6 +627,7 @@ const ModalContents = {
 function buildActionsMenu(row, openModal) {
   const merchantUsers = row?.original?.merchantUser ?? [];
   const hasMerchantUser = merchantUsers.some((item) => item?.kd_user);
+  const hasTerminal = (row?.original?.terminal?.length ?? 0) > 0;
 
   return (
     <DropdownMenu>
@@ -650,7 +651,7 @@ function buildActionsMenu(row, openModal) {
           <UserRoundPlusIcon />
           <span>Tambah Terminal</span>
         </DropdownMenuItem>
-        {hasMerchantUser && (
+        {hasMerchantUser && hasTerminal && (
           <DropdownMenuItem
             className="cursor-pointer"
             onClick={() => openModal('ResetPasswordTerminalModalContent', row)}
@@ -659,7 +660,7 @@ function buildActionsMenu(row, openModal) {
             <span>Reset Password Terminal</span>
           </DropdownMenuItem>
         )}
-        {hasMerchantUser && (
+        {hasMerchantUser && hasTerminal && (
           <DropdownMenuItem
             className="cursor-pointer"
             onClick={() => openModal('ResetDeviceMerchantModalContent', row)}
