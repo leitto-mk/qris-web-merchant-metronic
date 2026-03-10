@@ -26,7 +26,7 @@ export function MerchantReportPage() {
 
   const [dateFrom, setDateFrom] = useState(() => startOfToday());
   const [dateTo, setDateTo] = useState(() => new Date());
-  const [selectedPreset, setSelectedPreset] = useState('today'); // 'today' | '7d' | '30d' | '90d' | 'custom'
+  const [selectedPreset, setSelectedPreset] = useState('today'); // 'today' | '1d' | '7d' | '30d' | 'custom'
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState('');
   const [history, setHistory] = useState([]);
@@ -46,6 +46,33 @@ export function MerchantReportPage() {
   const formatDateTimeLocal = (d) => {
     const m = moment(d);
     return m.isValid() ? m.format('YYYY-MM-DD HH:mm:ss') : '';
+  };
+
+  const formatDateTimeInput = (d) => {
+    const m = moment(d);
+    return m.isValid() ? m.format('YYYY-MM-DDTHH:mm') : '';
+  };
+
+  const isRangeExceedingOneMonth = (from, to) => {
+    if (!from || !to) return false;
+    return moment(to).isAfter(moment(from).add(1, 'month'));
+  };
+
+  const handleCustomDateChange = (field, value) => {
+    const nextDate = value ? moment(value).toDate() : null;
+    if (!nextDate || Number.isNaN(nextDate.getTime())) {
+      return;
+    }
+
+    setError('');
+    setSelectedPreset('custom');
+
+    if (field === 'from') {
+      setDateFrom(nextDate);
+      return;
+    }
+
+    setDateTo(nextDate);
   };
 
   const handleFilterChange = (columnId, value) => {
@@ -241,6 +268,10 @@ export function MerchantReportPage() {
         setError('Tanggal From tidak boleh lebih besar dari To.');
         return;
       }
+      if (isRangeExceedingOneMonth(dateFrom, dateTo)) {
+        setError('Range report tidak boleh melebihi rentang 1 bulan.');
+        return;
+      }
       setLoadingHistory(true);
       const session = AuthService.retrieveSession();
       if (!session?.kd_user) {
@@ -327,6 +358,10 @@ export function MerchantReportPage() {
         setError('Tanggal From tidak boleh lebih besar dari To.');
         return;
       }
+      if (isRangeExceedingOneMonth(dateFrom, dateTo)) {
+        setError('Range report maksimal 1 bulan.');
+        return;
+      }
       setLoadingHistory(true);
       const mock = generateTransactionHistory({ count: 50, from: dateFrom, to: dateTo, merchant });
       setHistory(mock);
@@ -358,8 +393,9 @@ export function MerchantReportPage() {
                 <div className="font-mono text-sm">{formatDateTimeLocal(dateTo)}</div>
               </div>
             </div>
+
             {/* Preset range buttons */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-end gap-2">
               <Button
                 type="button"
                 variant={selectedPreset === 'today' ? 'mono' : 'dashed'}
@@ -392,7 +428,38 @@ export function MerchantReportPage() {
               >
                 30 Hari
               </Button>
+              <Button
+                type="button"
+                variant={selectedPreset === 'custom' ? 'mono' : 'dashed'}
+                onClick={() => {
+                  setSelectedPreset('custom');
+                  setError('');
+                }}
+                disabled={loadingHistory}
+              >
+                Rentang
+              </Button>
+
+              {selectedPreset === 'custom' && (
+                <>
+                  <Input
+                    type="datetime-local"
+                    className="w-[220px]"
+                    value={formatDateTimeInput(dateFrom)}
+                    onChange={(e) => handleCustomDateChange('from', e.target.value)}
+                    disabled={loadingHistory}
+                  />
+                  <Input
+                    type="datetime-local"
+                    className="w-[220px]"
+                    value={formatDateTimeInput(dateTo)}
+                    onChange={(e) => handleCustomDateChange('to', e.target.value)}
+                    disabled={loadingHistory}
+                  />
+                </>
+              )}
             </div>
+
             <div className="flex-1" />
             <Button onClick={handleTransactionHistory} disabled={loadingHistory}>
               {loadingHistory ? 'Mengambil...' : 'Ambil Report'}
@@ -403,12 +470,12 @@ export function MerchantReportPage() {
               </Button>
             )}
           </div>
+
           {error ? (
             <div className="text-red-500 text-sm">{error}</div>
           ) : null}
         </CardContent>
       </Card>
-
       {/* KPI Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card variant="accent">
