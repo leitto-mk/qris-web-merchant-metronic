@@ -210,10 +210,10 @@ export function TerminalQRDisplay() {
 
           {/* FOOTER */}
           <div className="flex flex-row justify-center items-center">
-            <div className="text-center text-sm mr-1">Powered by</div>
+            <div className="text-center text-sm text-gray-800 mr-1">Powered by</div>
             <div className="flex flex-row gap-1">
               <img src={BSG_ICON} className="w-5 h-5" alt="BSG Icon" />
-              <div className="text-sm">BSGMerchant</div>
+              <div className="text-sm text-gray-800">BSGMerchant</div>
             </div>
           </div>
         </div>
