@@ -57,7 +57,13 @@ export function LoginPage() {
     setInvalid(false);
     setLoading(true);
     try {
-      await AuthService.login({ username: values.username.toUpperCase(), password: values.password });
+      const data = await AuthService.login({ username: values.username.toUpperCase(), password: values.password });
+
+      if(data.status === 3) {
+        setReset(true);
+        return;
+      }
+
       navigate('/terminal/outlet');
     } catch (e) {
       setInvalid(true);
@@ -75,10 +81,20 @@ export function LoginPage() {
         new_password: values.new_password,
         confirm_new_password: values.confirm_new_password,
       });
+
+      const currentUsername = form.getValues('username');
+
+      form.reset({
+        username: currentUsername,
+        password: '',
+        new_password: '',
+        confirm_new_password: '',
+      });
+
       setReset(false);
     } catch (e) {
       setInvalid(true);
-      setInvalidMessage(e?.message || "Unable to reset Password");
+      setInvalidMessage(e?.message || 'Unable to reset Password');
     } finally {
       setLoading(false);
     }
@@ -134,14 +150,14 @@ export function LoginPage() {
                   <form onSubmit={form.handleSubmit(handleReset)} className="flex flex-col gap-4">
                     <InputWrapper className="h-11 border-xl">
                       <Key />
-                      <Input className="text-white font-semibold" disabled={loading} variant="lg" type="password" placeholder="PASSWORD BARU" {...form.register('new_password')} />
+                      <Input className="text-white font-semibold" disabled={loading} variant="lg" type="password" placeholder="Password Baru" {...form.register('new_password')} />
                       <div className="hover:cursor-pointer" onClick={() => setOnShow(!onShow)}>
                         { onShow ? <EyeClosed /> : <Eye />}
                       </div>
                     </InputWrapper>
                     <InputWrapper className="h-11 border-xl">
                       <Key />
-                      <Input className="text-white font-semibold" disabled={loading} variant="lg" type="password" placeholder="KONFIRMASI PASSWORD" {...form.register('confirm_new_password')} />
+                      <Input className="text-white font-semibold" disabled={loading} variant="lg" type="password" placeholder="Konfirmasi Password" {...form.register('confirm_new_password')} />
                       <div className="hover:cursor-pointer" onClick={() => setOnShow(!onShow)}>
                         { onShow ? <EyeClosed /> : <Eye />}
                       </div>
