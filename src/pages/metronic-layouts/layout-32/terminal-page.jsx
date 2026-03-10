@@ -14,6 +14,7 @@ import { Input, InputWrapper } from '@/components/ui/input.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Toolbar, ToolbarActions, ToolbarDescription, ToolbarHeading, ToolbarPageTitle } from '@/components/layouts/layout-32/components/toolbar.jsx';
 
+
 /**
  * Layout 32 Page Component
  *
@@ -125,49 +126,49 @@ export function TerminalPage() {
     setGenerate(true);
     const QRData = await getQRData();
 
-    if (QRData) {
-      const JSONData = {
-        domain: 'ID.CO.BANKSULUTGO.WWW',
-        outletName: outlet?.outlatName,
-        terminalID: outlet?.terminal?.[0]?.TerminalID,
-        MID: outlet?.MID,
-        NMID: outlet?.nmid,
-        MPAN: outlet?.MPAN,
-        MCC: outlet?.mcc,
-        kriteria: outlet?.kriteria,
-        currency: '360',
-        country: 'ID',
-        address: outlet?.kota,
-        postal: outlet?.kdPost,
-        billing: QRData.billing,
-        amount: QRData.set_amount,
-        withTip: '00',
-        tipAmount: '0',
-        tipPersen: '0',
-      };
+    if(!QRData) return;
 
-      const qrValue = QRService.toTLV(JSONData);
-      const qrSrc = await QRCode.toDataURL(qrValue, {
-        errorCorrectionLevel: 'L',
-        width: 800,
-        margin: 1,
-      });
+    const JSONData = {
+      domain: 'ID.CO.BANKSULUTGO.WWW',
+      outletName: outlet?.outlatName,
+      terminalID: outlet?.terminal?.[0]?.TerminalID,
+      MID: outlet?.MID,
+      NMID: outlet?.nmid,
+      MPAN: outlet?.MPAN,
+      MCC: outlet?.mcc,
+      kriteria: outlet?.kriteria,
+      currency: '360',
+      country: 'ID',
+      address: outlet?.kota,
+      postal: outlet?.kdPost,
+      billing: QRData.billing,
+      amount: QRData.set_amount,
+      withTip: '00',
+      tipAmount: '0',
+      tipPersen: '0',
+    };
 
-      const newPayment = {
-        currentTime: moment().format('YYYY-MM-DD HH:mm'),
-        outlet: outlet?.outlatName,
-        qr: qrValue,
-        nmid: outlet?.nmid,
-        expiresInMs: 180000,
-        amount: amountNumber,
-        display: true,
-      };
+    const qrValue = QRService.toTLV(JSONData);
+    const qrSrc = await QRCode.toDataURL(qrValue, {
+      errorCorrectionLevel: 'L',
+      width: 800,
+      margin: 1,
+    });
 
-      setPaymentQrSrc(qrSrc);
-      setPayment(newPayment);
-      startNewCountDown(newPayment.expiresInMs);
-      broadcastPayment(newPayment);
-    }
+    const newPayment = {
+      currentTime: moment().format('YYYY-MM-DD HH:mm'),
+      outlet: outlet?.outlatName,
+      qr: qrValue,
+      nmid: outlet?.nmid,
+      expiresInMs: 180000,
+      amount: amountNumber,
+      display: true,
+    };
+
+    setPaymentQrSrc(qrSrc);
+    setPayment(newPayment);
+    startNewCountDown(newPayment.expiresInMs);
+    broadcastPayment(newPayment);
 
     setGenerate(false);
   }, [getQRData, outlet, amountNumber, startNewCountDown, broadcastPayment]);
@@ -252,8 +253,67 @@ export function TerminalPage() {
     );
   }
 
-  const openCustomerDisplay = () => {
-    window.open('/terminal/qr-display', '_blank', 'width=1000,height=900,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
+  const openCustomerDisplay = async () => {
+    const popupUrl = '/terminal/qr-display';
+
+    const buildFeatures = (screenLike) => {
+      const left = screenLike?.availLeft ?? screenLike?.left ?? 0;
+      const top = screenLike?.availTop ?? screenLike?.top ?? 0;
+      const width = screenLike?.availWidth ?? screenLike?.width ?? window.screen.availWidth ?? 1200;
+      const height = screenLike?.availHeight ?? screenLike?.height ?? window.screen.availHeight ?? 900;
+
+      return [
+        `left=${left}`,
+        `top=${top}`,
+        `width=${width}`,
+        `height=${height}`,
+        'popup=yes',
+        'toolbar=no',
+        'menubar=no',
+        'location=no',
+        'status=no',
+        'scrollbars=yes',
+        'resizable=yes',
+      ].join(',');
+    };
+
+    try {
+      let targetScreen = window.screen;
+
+      if ('getScreenDetails' in window) {
+        const screenDetails = await window.getScreenDetails();
+
+        if (screenDetails?.screens?.length > 1) {
+          targetScreen =
+            screenDetails.screens.find((screen) => !screen.isPrimary) ||
+            screenDetails.screens[1];
+        }
+      }
+
+      const customerWindow = window.open(
+        popupUrl,
+        'customer-display',
+        buildFeatures(targetScreen)
+      );
+
+      if (!customerWindow) {
+        console.warn('Customer display popup was blocked by the browser.');
+        return;
+      }
+
+      customerWindow.focus();
+      customerWindow?.postMessage({ type: 'ENTER_FULLSCREEN' }, window.location.origin);
+    } catch (error) {
+      console.error('Failed to detect secondary display:', error);
+
+      const fallbackWindow = window.open(
+        popupUrl,
+        'customer-display',
+        buildFeatures(window.screen)
+      );
+
+      fallbackWindow?.focus();
+    }
   };
 
   const finishPayment = () => {

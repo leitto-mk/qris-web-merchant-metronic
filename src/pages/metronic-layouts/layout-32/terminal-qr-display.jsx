@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+
 
 // Public assets (placed under /public). Use absolute paths so they work in a popup window, too.
 const QRIS_LOGO = '/media/bsg/qris-logo-dark.png';
@@ -23,15 +24,53 @@ export function TerminalQRDisplay() {
   const endTimeRef = useRef(null);
   const intervalRef = useRef(null);
 
-  // Format currency once per amount change
-  const formattedAmount = useMemo(() => {
-    const v = payment?.amount || 0;
+  const enterFullscreen = useCallback(async () => {
     try {
-      return new Intl.NumberFormat('id-ID').format(v);
-    } catch {
-      return String(v);
+      const element = document.documentElement;
+
+      if (document.fullscreenElement) return true;
+      if (!element?.requestFullscreen) return false;
+
+      await element.requestFullscreen();
+      return true;
+    } catch (error) {
+      console.error('Fullscreen request failed:', error);
+      return false;
     }
-  }, [payment?.amount]);
+  }, []);
+
+  // Try once on mount
+  useEffect(() => {
+    enterFullscreen();
+  }, [enterFullscreen]);
+
+  // Retry when opener sends a message
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== 'ENTER_FULLSCREEN') return;
+
+      enterFullscreen();
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [enterFullscreen]);
+
+  // Fallback: first user interaction inside popup
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      enterFullscreen();
+    };
+
+    window.addEventListener('click', handleFirstInteraction, { once: true });
+    window.addEventListener('keydown', handleFirstInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+  }, [enterFullscreen]);
 
   // Update severity when time string changes
   useEffect(() => {
