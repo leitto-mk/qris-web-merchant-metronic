@@ -12,6 +12,12 @@ import * as Recharts from 'recharts';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart.jsx';
 import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
 
+/**
+ * Layout 1 Merchant Report Page Component
+ *
+ * @returns {React.JSX.Element}
+ * @constructor
+ */
 export function MerchantReportPage() {
   const { merchant } = useAppData();
 

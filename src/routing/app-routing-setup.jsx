@@ -8,7 +8,7 @@ import { OutletPage } from '@/pages/metronic-layouts/layout-1/outlets.jsx';
 import { AppDataProvider } from '@/context/AppDataContext.jsx';
 import AuthService from '@/services/AuthService';
 import { Layout32 } from '@/components/layouts/layout-32/index.jsx';
-import { Layout32Page } from '@/pages/metronic-layouts/layout-32/terminal-page.jsx';
+import { TerminalPage } from '@/pages/metronic-layouts/layout-32/terminal-page.jsx';
 import { TerminalQRDisplay } from '@/pages/metronic-layouts/layout-32/terminal-qr-display.jsx';
 
 function RequireAuth({ children }) {
@@ -65,8 +65,8 @@ export function AppRoutingSetup() {
             </AppDataProvider>
           </RequireAuth>
         }>
-          <Route path="/terminal/outlet" element={<Layout32Page />} />
-          <Route path="/terminal/pembayaran" element={<Layout32Page />} />
+          <Route path="/terminal/outlet" element={<TerminalPage />} />
+          <Route path="/terminal/pembayaran" element={<TerminalPage />} />
         </Route>
       )}
 

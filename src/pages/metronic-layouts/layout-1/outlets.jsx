@@ -1003,6 +1003,12 @@ function OutletPageSkeleton() {
   );
 }
 
+/**
+ * Layout 1 Outlet Page Component
+ *
+ * @returns {React.JSX.Element}
+ * @constructor
+ */
 export function OutletPage() {
   const { merchant, outlets, loading } = useAppData();
 

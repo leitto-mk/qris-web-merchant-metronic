@@ -14,8 +14,13 @@ import { Input, InputWrapper } from '@/components/ui/input.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Toolbar, ToolbarActions, ToolbarDescription, ToolbarHeading, ToolbarPageTitle } from '@/components/layouts/layout-32/components/toolbar.jsx';
 
-
-export function Layout32Page() {
+/**
+ * Layout 32 Page Component
+ *
+ * @returns {React.JSX.Element}
+ * @constructor
+ */
+export function TerminalPage() {
   const { merchant, outlets, loading: appLoading } = useAppData();
 
   const [tab, setTab] = useState('outlet');

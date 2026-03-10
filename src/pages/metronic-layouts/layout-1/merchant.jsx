@@ -66,6 +66,12 @@ function renderSkeleton() {
   );
 }
 
+/**
+ * Layout 1 Merchant Page Component
+ *
+ * @returns {React.JSX.Element|*}
+ * @constructor
+ */
 export function MerchantPage() {
   const { merchant, outlets, loading } = useAppData();
 
