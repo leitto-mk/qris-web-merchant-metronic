@@ -53,24 +53,24 @@ export function Header() {
         headerSticky && 'border-b border-border',
       )}
     >
-      <div className="container-fluid flex justify-end items-stretch lg:gap-4">
+      <div className="container-fluid flex justify-between items-stretch lg:justify-end lg:gap-4">
         {/* HeaderLogo */}
-        <div className="flex lg:hidden items-center gap-2.5">
-          <Link to="/" className="shrink-0">
-            <img
-              src={toAbsoluteUrl('/public/media/bsg/icon.png')}
-              className="h-[25px] w-full"
-              alt="mini-logo"
-            />
-          </Link>
-          <div className="flex items-center">
+        <div className="flex lg:hidden items-center gap-2.5 mr-6">
+          {/*<Link to="/" className="shrink-0">*/}
+          {/*  <img*/}
+          {/*    src={toAbsoluteUrl('/public/media/bsg/icon.png')}*/}
+          {/*    className="h-[25px] w-full"*/}
+          {/*    alt="mini-logo"*/}
+          {/*  />*/}
+          {/*</Link>*/}
+          <div className="flex items-center ml-2">
             {mobileMode && (
               <Sheet
                 open={isSidebarSheetOpen}
                 onOpenChange={setIsSidebarSheetOpen}
               >
                 <SheetTrigger asChild>
-                  <Button variant="ghost" mode="icon">
+                  <Button variant="ghost" mode="icon" size="xl">
                     <Menu className="text-muted-foreground/70" />
                   </Button>
                 </SheetTrigger>
@@ -86,28 +86,28 @@ export function Header() {
                 </SheetContent>
               </Sheet>
             )}
-            {mobileMode && (
-              <Sheet
-                open={isMegaMenuSheetOpen}
-                onOpenChange={setIsMegaMenuSheetOpen}
-              >
-                <SheetTrigger asChild>
-                  <Button variant="ghost" mode="icon">
-                    <SquareChevronRight className="text-muted-foreground/70" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  className="p-0 gap-0 w-[275px]"
-                  side="left"
-                  close={false}
-                >
-                  <SheetHeader className="p-0 space-y-0" />
-                  <SheetBody className="p-0 overflow-y-auto">
-                    <MegaMenuMobile />
-                  </SheetBody>
-                </SheetContent>
-              </Sheet>
-            )}
+            {/*{mobileMode && (*/}
+            {/*  <Sheet*/}
+            {/*    open={isMegaMenuSheetOpen}*/}
+            {/*    onOpenChange={setIsMegaMenuSheetOpen}*/}
+            {/*  >*/}
+            {/*    <SheetTrigger asChild>*/}
+            {/*      <Button variant="ghost" mode="icon">*/}
+            {/*        <SquareChevronRight className="text-muted-foreground/70" />*/}
+            {/*      </Button>*/}
+            {/*    </SheetTrigger>*/}
+            {/*    <SheetContent*/}
+            {/*      className="p-0 gap-0 w-[275px]"*/}
+            {/*      side="left"*/}
+            {/*      close={false}*/}
+            {/*    >*/}
+            {/*      <SheetHeader className="p-0 space-y-0" />*/}
+            {/*      <SheetBody className="p-0 overflow-y-auto">*/}
+            {/*        <MegaMenuMobile />*/}
+            {/*      </SheetBody>*/}
+            {/*    </SheetContent>*/}
+            {/*  </Sheet>*/}
+            {/*)}*/}
           </div>
         </div>
 
