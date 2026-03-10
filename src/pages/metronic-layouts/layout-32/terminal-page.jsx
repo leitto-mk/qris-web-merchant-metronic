@@ -601,10 +601,7 @@ export function TerminalPage() {
                                 Pembayaran
                               </p>
                               <p className="text-5xl font-bold text-gray-800 mb-3">
-                                Rp.{' '}
-                                {new Intl.NumberFormat('id-ID').format(
-                                  payment?.amount || 0,
-                                )}
+                                Rp{new Intl.NumberFormat('id-ID').format(payment?.amount || 0)}
                               </p>
                               <div className="flex flex-row justify-center gap-1">
                                 <i className="text-xl pi pi-clock text-gray-800"></i>
