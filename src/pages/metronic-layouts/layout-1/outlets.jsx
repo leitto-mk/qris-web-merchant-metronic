@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
-import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X } from 'lucide-react';
+import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, MonitorSmartphone, Smartphone, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X } from 'lucide-react';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
@@ -21,6 +21,313 @@ import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Stepper, StepperContent, StepperIndicator, StepperItem, StepperNav, StepperPanel, StepperSeparator, StepperTitle, StepperTrigger } from '@/components/ui/stepper.jsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+function buildExpandedDetails(merchant, data) {
+  const merchantUsersByKdUser = new Map(
+    (data?.merchantUser ?? [])
+      .filter((item) => item?.kd_user)
+      .map((item) => [item.kd_user, item]),
+  );
+
+  const terminalDetails = (data?.terminal ?? []).map((terminal) => {
+    const matchedMerchantUser = merchantUsersByKdUser.get(terminal?.kd_user);
+
+    return {
+      ...terminal,
+      userLabel: terminal?.kd_user || '-',
+      deviceLabel: matchedMerchantUser.device
+    };
+  });
+
+  return (
+    <div className="m-3 md:m-4 xl:m-5">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 xl:gap-5">
+        {/* QR IMAGE */}
+        <div className="xl:col-span-3">
+          <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-background to-muted/20 shadow-sm overflow-hidden h-full">
+            <div className="flex items-center justify-between gap-3 border-b border-dashed px-4 py-3">
+              <div className="min-w-0">
+                <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  QRIS Preview
+                </div>
+                <div className="text-sm font-semibold uppercase truncate">
+                  {data.outlatName || 'Outlet'}
+                </div>
+              </div>
+              <Badge variant="secondary" className="uppercase shrink-0">
+                {data.nmid || '-'}
+              </Badge>
+            </div>
+
+            <div className="p-4">
+              <div className="group/overlay relative flex items-center justify-center rounded-2xl bg-white ring-1 ring-black/5 shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-3 min-h-[16rem] md:min-h-[18rem] xl:min-h-[20rem]">
+                <div className="absolute inset-0 rounded-2xl bg-black/45 items-center justify-center opacity-0 transition-opacity duration-300 hidden lg:flex group-hover/overlay:opacity-100">
+                  <Button
+                    className="text-xs md:text-sm"
+                    variant="outline"
+                    onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}
+                  >
+                    Print / Download
+                  </Button>
+                </div>
+                <img
+                  src={data?.qris?.qr_base64}
+                  aria-label="QRIS Image"
+                  className="w-full max-w-[11rem] md:max-w-[13rem] xl:max-w-[15rem] h-auto object-contain rounded-xl"
+                  alt="Qris-Image"
+                />
+              </div>
+
+              <Button
+                className="mt-4 w-full lg:hidden"
+                variant="outline"
+                onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}
+              >
+                Print / Download
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* OUTLET INFO */}
+        <div className="xl:col-span-4">
+          <Card
+            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm h-full"
+            variant="accent"
+          >
+            <CardHeader className="pb-3">
+              <CardHeading>
+                <div className="font-bold uppercase tracking-wide">
+                  Outlet Info
+                </div>
+              </CardHeading>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Cabang</span>
+                <Badge>{data.branchInfo.ket}</Badge>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Nama Merchant</span>
+                <span className="uppercase sm:text-right max-w-full sm:max-w-[60%] break-words">
+                  {merchant.MRCName}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Nama Outlet</span>
+                <span className="uppercase sm:text-right max-w-full sm:max-w-[60%] break-words">
+                  {data.outlatName}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Tipe Usaha</span>
+                <span className="sm:text-right">
+                  {data.tipe_usaha === 'INDIVIDU'
+                    ? 'INDIVIDU'
+                    : 'BADAN USAHA'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Kategori</span>
+                <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
+                  {data.kategori || '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Kriteria Merchant</span>
+                <Badge>{data.kriteria}</Badge>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">MCC</span>
+                <Badge variant="secondary">{data.mcc || '-'}</Badge>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">MPAN</span>
+                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
+                  {data.MPAN || '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">MID</span>
+                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
+                  {data.MID || '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">NMID</span>
+                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
+                  {data.nmid || '-'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* OWNER INFO */}
+        <div className="xl:col-span-5">
+          <Card
+            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm h-full"
+            variant="accent"
+          >
+            <CardHeader className="pb-3">
+              <CardHeading>
+                <div className="font-bold uppercase tracking-wide">
+                  Informasi Pemilik
+                </div>
+              </CardHeading>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Alamat</span>
+                <span className="sm:text-right break-words max-w-full sm:max-w-[65%]">
+                  {`${data.outlatAddress}, ${data.kota} ${data.kdPost}`}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">KTP</span>
+                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
+                  {data.ktp ?? '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">NPWP</span>
+                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
+                  {data.npwp ?? '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">No. HP</span>
+                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
+                  {data.phonenum}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Email</span>
+                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
+                  {data.email}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Legalitas Usaha</span>
+                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
+                  {data.legalitas_usaha}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">No. Legalitas Usaha</span>
+                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
+                  {data.no_legalitas_usaha ?? '-'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">No. Rekening</span>
+                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
+                  {data.acc_no}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+                <span className="text-muted-foreground">Nama Pemilik Rekening</span>
+                <span className="sm:text-right break-words max-w-full sm:max-w-[65%]">
+                  {data.acc_name}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* TERMINALS */}
+        <div className="xl:col-span-12">
+          <Card
+            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm"
+            variant="accent"
+          >
+            <CardHeader className="pb-3">
+              <CardHeading>
+                <div className="font-bold uppercase tracking-wide">
+                  Terminals
+                </div>
+              </CardHeading>
+            </CardHeader>
+            <CardContent className="pt-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
+                {terminalDetails.map((terminal) => (
+                  <div
+                    key={terminal.XID || terminal.TerminalID}
+                    className="group rounded-2xl border border-border/60 bg-gradient-to-br from-background to-muted/30 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          Terminal
+                        </div>
+                        <div className="mt-1 text-xl font-bold uppercase tracking-wide">
+                          {terminal.TerminalID || '-'}
+                        </div>
+                      </div>
+
+                      {/*<Badge*/}
+                      {/*  variant={terminal.TerminalID === 'A01' ? 'primary' : 'secondary'}*/}
+                      {/*  className="uppercase shrink-0"*/}
+                      {/*>*/}
+                      {/*  {terminal.TerminalID === 'A01' ? 'Default' : 'Active'}*/}
+                      {/*</Badge>*/}
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      <div className="flex items-start gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
+                        <UserRoundIcon className="mt-0.5 size-4 text-muted-foreground shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Digunakan oleh
+                          </div>
+                          <div className="font-semibold uppercase break-words">
+                            {terminal.userLabel}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
+                        <Smartphone className="mt-0.5 size-4 text-muted-foreground shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Device
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <Badge
+                              variant={
+                                terminal.deviceLabel === 'N/A'
+                                  ? 'secondary'
+                                  : 'success'
+                              }
+                              className="max-w-full"
+                            >
+                              <span className="truncate max-w-[220px]">
+                                {terminal.deviceLabel}
+                              </span>
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {!terminalDetails.length && (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 py-10 text-center">
+                  <MonitorSmartphone className="size-8 text-muted-foreground" />
+                  <div className="mt-3 font-semibold">Belum ada terminal</div>
+                  <div className="text-sm text-muted-foreground">
+                    Terminal yang terdaftar pada outlet ini akan tampil di sini.
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const ModalContents = {
   AddDeviceModalContent: ({ selected, closeModal }) => {
@@ -674,286 +981,6 @@ function buildActionsMenu(row, openModal) {
   );
 }
 
-function buildExpandedDetails(merchant, data) {
-  return (
-    <div className="m-3 md:m-4 xl:m-5">
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 xl:gap-5">
-        {/* QR IMAGE */}
-        <div className="xl:col-span-3">
-          <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-background to-muted/20 shadow-sm overflow-hidden h-full">
-            <div className="flex items-center justify-between gap-3 border-b border-dashed px-4 py-3">
-              <div className="min-w-0">
-                <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  QRIS Preview
-                </div>
-                <div className="text-sm font-semibold uppercase truncate">
-                  {data.outlatName || 'Outlet'}
-                </div>
-              </div>
-              <Badge variant="secondary" className="uppercase shrink-0">
-                {data.nmid || '-'}
-              </Badge>
-            </div>
-
-            <div className="p-4">
-              <div className="group/overlay relative flex items-center justify-center rounded-2xl bg-white ring-1 ring-black/5 shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-3 min-h-[16rem] md:min-h-[18rem] xl:min-h-[20rem]">
-                <div className="absolute inset-0 rounded-2xl bg-black/45 items-center justify-center opacity-0 transition-opacity duration-300 hidden lg:flex group-hover/overlay:opacity-100">
-                  <Button
-                    className="text-xs md:text-sm"
-                    variant="outline"
-                    onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}
-                  >
-                    Print / Download
-                  </Button>
-                </div>
-                <img
-                  src={data?.qris?.qr_base64}
-                  aria-label="QRIS Image"
-                  className="w-full max-w-[11rem] md:max-w-[13rem] xl:max-w-[15rem] h-auto object-contain rounded-xl"
-                  alt="Qris-Image"
-                />
-              </div>
-
-              <Button
-                className="mt-4 w-full lg:hidden"
-                variant="outline"
-                onClick={() => ImagePrintService.base64(data.qris?.qr_base64)}
-              >
-                Print / Download
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* OUTLET INFO */}
-        <div className="xl:col-span-4">
-          <Card
-            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm h-full"
-            variant="accent"
-          >
-            <CardHeader className="pb-3">
-              <CardHeading>
-                <div className="font-bold uppercase tracking-wide">
-                  Outlet Info
-                </div>
-              </CardHeading>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Cabang</span>
-                <Badge>{data.branchInfo.ket}</Badge>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Nama Merchant</span>
-                <span className="uppercase sm:text-right max-w-full sm:max-w-[60%] break-words">
-                  {merchant.MRCName}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Nama Outlet</span>
-                <span className="uppercase sm:text-right max-w-full sm:max-w-[60%] break-words">
-                  {data.outlatName}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Tipe Usaha</span>
-                <span className="sm:text-right">
-                  {data.tipe_usaha === 'INDIVIDU'
-                    ? 'INDIVIDU'
-                    : 'BADAN USAHA'}
-                </span>
-              </div>
-              {data.tipe_usaha === 'BADAN_USAHA' && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                  <span className="text-muted-foreground">Institusi</span>
-                  <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
-                    {data.nama_institusi || '-'}
-                  </span>
-                </div>
-              )}
-              {data.tipe_usaha === 'BADAN_USAHA' &&
-                data.kategori === 'PEMDA' && (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                    <span className="text-muted-foreground">PEMDA</span>
-                    <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
-                      {data.pemda || '-'}
-                    </span>
-                  </div>
-                )}
-              {data.tipe_usaha === 'BADAN_USAHA' &&
-                data.kategori === 'PEMDA' && (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                    <span className="text-muted-foreground">DINAS</span>
-                    <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
-                      {data.dinas || '-'}
-                    </span>
-                  </div>
-                )}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Kategori</span>
-                <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
-                  {data.kategori || '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Kriteria Merchant</span>
-                <Badge>{data.kriteria}</Badge>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">MCC</span>
-                <Badge variant="secondary">{data.mcc || '-'}</Badge>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">MPAN</span>
-                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
-                  {data.MPAN || '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">MID</span>
-                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
-                  {data.MID || '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">NMID</span>
-                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
-                  {data.nmid || '-'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* OWNER INFO */}
-        <div className="xl:col-span-5">
-          <Card
-            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm h-full"
-            variant="accent"
-          >
-            <CardHeader className="pb-3">
-              <CardHeading>
-                <div className="font-bold uppercase tracking-wide">
-                  Informasi Pemilik
-                </div>
-              </CardHeading>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Alamat</span>
-                <span className="sm:text-right break-words max-w-full sm:max-w-[65%]">
-                  {`${data.outlatAddress}, ${data.kota} ${data.kdPost}`}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">KTP</span>
-                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
-                  {data.ktp ?? '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">NPWP</span>
-                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
-                  {data.npwp ?? '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">No. HP</span>
-                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
-                  {data.phonenum}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Email</span>
-                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
-                  {data.email}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Legalitas Usaha</span>
-                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
-                  {data.legalitas_usaha}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">No. Legalitas Usaha</span>
-                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
-                  {data.no_legalitas_usaha ?? '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">No. Rekening</span>
-                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
-                  {data.acc_no}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Nama Pemilik Rekening</span>
-                <span className="sm:text-right break-words max-w-full sm:max-w-[65%]">
-                  {data.acc_name}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* TERMINALS */}
-        <div className="xl:col-span-12">
-          <Card
-            className="w-full min-w-0 rounded-2xl border border-border/60 shadow-sm"
-            variant="accent"
-          >
-            <CardHeader className="pb-3">
-              <CardHeading>
-                <div className="font-bold uppercase tracking-wide">
-                  Terminals
-                </div>
-              </CardHeading>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-5 pt-3">
-              <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-                <div className="font-bold md:w-36 text-muted-foreground shrink-0">
-                  Terminal
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {data.terminal.map((terminal) => (
-                    <Badge
-                      value={terminal.TerminalID}
-                      variant="secondary"
-                      size="lg"
-                    >
-                      {terminal.TerminalID}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-                <div className="font-bold md:w-36 text-muted-foreground shrink-0">
-                  Merchant User
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {data.terminal
-                    .filter((t) => t.TerminalID !== 'A01')
-                    .map((t) => (
-                      <Badge
-                        className="uppercase"
-                        variant="secondary"
-                        size="lg"
-                      >
-                        {t.kd_user}
-                      </Badge>
-                    ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function OutletPageSkeleton() {
   return (
     <div className="mx-auto my-2 flex w-full max-w-[1600px] flex-wrap gap-5 px-3 md:px-4 xl:px-5 2xl:px-6">
@@ -1225,7 +1252,7 @@ export function OutletPage() {
   }
 
   return (
-    <div className="mx-auto my-2 flex w-full max-w-[1600px] flex-wrap gap-5 px-3 md:px-4 xl:px-5 2xl:px-6">
+    <div className="mx-auto my-2 flex w-full flex-wrap gap-5 px-3 md:px-4 xl:px-5 2xl:px-6">
       <DataGrid
         table={table}
         recordCount={outlets?.length || 0}
