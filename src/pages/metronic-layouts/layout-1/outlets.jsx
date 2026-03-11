@@ -1042,7 +1042,7 @@ export function OutletPage() {
   const [sorting, setSorting] = useState([{ id: 'outlatName', desc: true }]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 5,
+    pageSize: (outlets?.length ?? 0) < 10 ? 10 : 5,
   });
 
   // Modal state
@@ -1252,7 +1252,7 @@ export function OutletPage() {
   }
 
   return (
-    <div className="mx-auto my-2 flex w-full flex-wrap gap-5 px-3 md:px-4 xl:px-5 2xl:px-6">
+    <div className="mx-auto my-5 flex w-full flex-wrap gap-5 px-3 md:px-4 xl:px-5 2xl:px-6">
       <DataGrid
         table={table}
         recordCount={outlets?.length || 0}
@@ -1264,6 +1264,7 @@ export function OutletPage() {
           columnsResizable: true,
           columnsMovable: true,
           columnsVisibility: true,
+          width: 'auto',
         }}
       >
         <Card className="w-full rounded-2xl border border-border/60 shadow-sm">
