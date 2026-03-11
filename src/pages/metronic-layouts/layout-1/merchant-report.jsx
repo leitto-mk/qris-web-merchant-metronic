@@ -117,7 +117,7 @@ export function MerchantReportPage() {
     };
   if (key === '30d')
     return {
-      from: moment().subtract(7, 'days').startOf('day').toDate(),
+      from: moment().subtract(30, 'days').startOf('day').toDate(),
       to: endOfToday
     };
 
