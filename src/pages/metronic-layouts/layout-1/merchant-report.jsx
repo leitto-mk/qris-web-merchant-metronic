@@ -1,22 +1,17 @@
-import { useAppData } from '@/context/AppDataContext.jsx';
 import { useCallback, useMemo, useState } from 'react';
+import { useAppData } from '@/context/AppDataContext.jsx';
+import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
+import { Download } from 'lucide-react';
 import moment from 'moment';
+import * as Recharts from 'recharts';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge.jsx';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart.jsx';
 import { Input } from '@/components/ui/input.jsx';
-import { Download } from 'lucide-react';
-import * as Recharts from 'recharts';
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent
-} from '@/components/ui/chart.jsx';
-import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
+
 
 /**
  * Layout 1 Merchant Report Page Component
@@ -49,14 +44,14 @@ export function MerchantReportPage() {
   });
 
   // Helpers
-  const formatDateTimeLocal = (d) => {
+  const formatDateLocal = (d) => {
     const m = moment(d);
-    return m.isValid() ? m.format('YYYY-MM-DD HH:mm:ss') : '';
+    return m.isValid() ? m.format('YYYY-MM-DD') : '';
   };
 
   const formatDateTimeInput = (d) => {
     const m = moment(d);
-    return m.isValid() ? m.format('YYYY-MM-DDTHH:mm') : '';
+    return m.isValid() ? m.format('YYYY-MM-DD HH:mm:ss') : '';
   };
 
   const isRangeExceedingOneMonth = (from, to) => {
@@ -307,8 +302,8 @@ export function MerchantReportPage() {
 
       const payload = {
         kdUser: session.kd_user,
-        date_from: formatDateTimeLocal(dateFrom),
-        date_to: formatDateTimeLocal(dateTo),
+        date_from: formatDateLocal(dateFrom),
+        date_to: formatDateLocal(dateTo),
       };
 
       // Mock mode: generate 50 dummy records locally
@@ -408,12 +403,12 @@ export function MerchantReportPage() {
             <div className="flex items-center gap-3">
               <div className="rounded-md border px-3 py-2">
                 <div className="text-xs text-muted-foreground">Dari</div>
-                <div className="font-mono text-sm">{formatDateTimeLocal(dateFrom)}</div>
+                <div className="font-mono text-sm">{formatDateTimeInput(dateFrom)}</div>
               </div>
               <span className="text-muted-foreground">→</span>
               <div className="rounded-md border px-3 py-2">
                 <div className="text-xs text-muted-foreground">Sampai</div>
-                <div className="font-mono text-sm">{formatDateTimeLocal(dateTo)}</div>
+                <div className="font-mono text-sm">{formatDateTimeInput(dateTo)}</div>
               </div>
             </div>
 
@@ -466,16 +461,18 @@ export function MerchantReportPage() {
               {selectedPreset === 'custom' && (
                 <>
                   <Input
-                    type="datetime-local"
-                    className="w-[220px]"
-                    value={formatDateTimeInput(dateFrom)}
+                    type="date"
+                    lang="en-GB"
+                    className="w-auto"
+                    value={formatDateLocal(dateFrom)}
                     onChange={(e) => handleCustomDateChange('from', e.target.value)}
                     disabled={loadingHistory}
                   />
                   <Input
-                    type="datetime-local"
-                    className="w-[220px]"
-                    value={formatDateTimeInput(dateTo)}
+                    type="date"
+                    lang="en-GB"
+                    className="w-auto"
+                    value={formatDateLocal(dateTo)}
                     onChange={(e) => handleCustomDateChange('to', e.target.value)}
                     disabled={loadingHistory}
                   />
@@ -650,17 +647,17 @@ export function MerchantReportPage() {
                 </tr>
                 </thead>
                 <tbody>
-                {filteredHistory.map((it, idx) => (
+                {filteredHistory.map((row, idx) => (
                   <tr key={idx} className="border-b border-dashed last:border-0">
-                    <td className="py-2 pr-4 whitespace-nowrap">{new Date(it.timestamprq).toLocaleString('id-ID')}</td>
-                    <td className="py-2 pr-4 text-right font-mono">{formatIDR(it.amount)}</td>
-                    <td className="py-2 pr-4">{it.issuer}</td>
-                    <td className="py-2 pr-4">{it.outlet}</td>
-                    <td className="py-2 pr-4">{it.terminal}</td>
-                    <td className="py-2 pr-4 font-mono">{it.rrn}</td>
-                    <td className="py-2 pr-4">{it.fromname}</td>
-                    <td className="py-2 pr-4 font-mono">{maskAcc(it.fromacc)}</td>
-                    <td className="py-2 pr-4 font-mono">{maskAcc(it.toacc)}</td>
+                    <td className="py-2 pr-4 whrowespace-nowrap">{new Date(row.timestamprq).toLocaleString('id-ID')}</td>
+                    <td className="py-2 pr-4 text-right font-mono">{formatIDR(row.amount)}</td>
+                    <td className="py-2 pr-4">{row.issuer.toUpperCase()}</td>
+                    <td className="py-2 pr-4">{row.outlet}</td>
+                    <td className="py-2 pr-4">{row.terminal}</td>
+                    <td className="py-2 pr-4 font-mono">{row.rrn}</td>
+                    <td className="py-2 pr-4">{row.fromname.toUpperCase() ?? 'N/A'}</td>
+                    <td className="py-2 pr-4 font-mono">{maskAcc(row.fromacc)}</td>
+                    <td className="py-2 pr-4 font-mono">{maskAcc(row.toacc)}</td>
                   </tr>
                 ))}
                 </tbody>
