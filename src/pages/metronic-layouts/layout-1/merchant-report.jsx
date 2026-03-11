@@ -1,5 +1,5 @@
 import { useAppData } from '@/context/AppDataContext.jsx';
-import { useMemo, useState, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import moment from 'moment';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
@@ -9,7 +9,13 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Download } from 'lucide-react';
 import * as Recharts from 'recharts';
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart.jsx';
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent
+} from '@/components/ui/chart.jsx';
 import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
 
 /**
@@ -95,16 +101,33 @@ export function MerchantReportPage() {
   };
 
   // Quick range presets (relative to now, local time)
-  const nowLocal = () => moment().toDate();
-  const minusDays = (base, days) => moment(base).subtract(days, 'days').toDate();
   const getRange = (key) => {
-    const now = nowLocal();
-    if (key === 'today') return { from: startOfToday(), to: now };
-    if (key === '1d') return { from: minusDays(now, 1), to: now };
-    if (key === '7d') return { from: minusDays(now, 7), to: now };
-    if (key === '30d') return { from: minusDays(now, 30), to: now };
-    return { from: dateFrom, to: dateTo };
-  };
+  const endOfToday = moment().endOf('day').toDate();
+
+  if (key === 'today')
+    return {
+      from: startOfToday(),
+      to: endOfToday
+    };
+  if (key === '1d') {
+    return {
+      from: moment().subtract(1, 'day').startOf('day').toDate(),
+      to: moment().subtract(1, 'day').endOf('day').toDate(),
+    };
+  }
+  if (key === '7d')
+    return {
+      from: moment().subtract(7, 'days').startOf('day').toDate(),
+      to: endOfToday
+    };
+  if (key === '30d')
+    return {
+      from: moment().subtract(7, 'days').startOf('day').toDate(),
+      to: endOfToday
+    };
+
+  return { from: dateFrom, to: dateTo };
+};
   const applyPreset = (key) => {
     const { from, to } = getRange(key);
     setSelectedPreset(key);
@@ -125,7 +148,7 @@ export function MerchantReportPage() {
 
   const maskAcc = (acc) => (acc ? String(acc).replace(/(\d{4})\d+(\d{4})/, '$1••••$2') : '-');
 
-  const uniqeIssuers = useMemo(() => {
+  const uniqueIssuers = useMemo(() => {
     if (!history.length) return [];
     const issuers = new Set(history.map(item => item.issuer).filter(Boolean));
     return ['All', ...Array.from(issuers)];
@@ -213,7 +236,7 @@ export function MerchantReportPage() {
   }, [filters]);
 
   const filteredTotals = useMemo(() => {
-    const totalAmount = filteredHistory.reduce((sum, it) => sum + Number(it.amount || 0), 0);
+    const totalAmount = filteredHistory.reduce((prev, cur) => prev + Number(cur.amount || 0), 0);
     const count = filteredHistory.length;
     return { totalAmount, count };
   }, [filteredHistory]);
@@ -221,37 +244,37 @@ export function MerchantReportPage() {
   // Derived metrics
   const totals = useMemo(() => {
     const data = isFiltered ? filteredHistory : history;
-    const totalAmount = data.reduce((sum, it) => sum + Number(it.amount || 0), 0);
+    const totalAmount = data.reduce((prev, cur) => prev + Number(cur.amount || 0), 0);
     const count = data.length;
     const avg = count ? totalAmount / count : 0;
-    const byIssuer = data.reduce((m, it) => {
-      const key = it.issuer || '-';
-      m[key] = (m[key] || 0) + 1;
-      return m;
+    const byIssuer = data.reduce((prev, cur) => {
+      const key = cur.issuer || '-';
+      prev[key] = (prev[key] || 0) + 1;
+      return prev;
     }, {});
-    const byTerminal = data.reduce((m, it) => {
-      const key = it.terminal || '-';
-      m[key] = (m[key] || 0) + 1;
-      return m;
+    const byTerminal = data.reduce((prev, cur) => {
+      const key = cur.terminal || '-';
+      prev[key] = (prev[key] || 0) + 1;
+      return prev;
     }, {});
     return { totalAmount, count, avg, byIssuer, byTerminal };
   }, [history, filteredHistory, isFiltered]);
 
   // Simple daily bucket for the chart (local time)
   const chartData = useMemo(() => {
-    const data = isFiltered ? filteredHistory : history;
+    const histories = isFiltered ? filteredHistory : history;
     const buckets = new Map();
-    for (const it of data) {
-      const m = moment(it.timestamprq); // local time per spec
-      if (!m.isValid()) continue;
-      const key = m.format('YYYY-MM-DD');
+    for (const hist of histories) {
+      const localTime = moment(hist.timestamprq); // local time per spec
+      if (!localTime.isValid()) continue;
+      const key = localTime.format('YYYY-MM-DD');
       const prev = buckets.get(key) || 0;
-      buckets.set(key, prev + Number(it.amount || 0));
+      buckets.set(key, prev + Number(hist.amount || 0));
     }
-    const arr = Array.from(buckets.entries())
+
+    return Array.from(buckets.entries())
       .map(([date, amount]) => ({ date, amount }))
       .sort((a, b) => (a.date < b.date ? -1 : 1));
-    return arr;
   }, [history, filteredHistory, isFiltered]);
 
   const issuerChips = useMemo(() => Object.entries(totals.byIssuer || {}), [totals.byIssuer]);
@@ -265,7 +288,7 @@ export function MerchantReportPage() {
       setError('');
       // basic validation
       if (dateFrom > dateTo) {
-        setError('Tanggal From tidak boleh lebih besar dari To.');
+        setError('Tanggal `Dari` tidak boleh melebihi tanggal `Sampai`');
         return;
       }
       if (isRangeExceedingOneMonth(dateFrom, dateTo)) {
@@ -355,11 +378,11 @@ export function MerchantReportPage() {
     try {
       setError('');
       if (dateFrom > dateTo) {
-        setError('Tanggal From tidak boleh lebih besar dari To.');
+        setError('Tanggal `Dari` tidak boleh melebihi tanggal `Sampai`');
         return;
       }
       if (isRangeExceedingOneMonth(dateFrom, dateTo)) {
-        setError('Range report maksimal 1 bulan.');
+        setError('Range report tidak boleh melebihi rentang 1 bulan.');
         return;
       }
       setLoadingHistory(true);
@@ -599,7 +622,7 @@ export function MerchantReportPage() {
                       value={filters.issuer}
                       onChange={(e) => handleFilterChange('issuer', e.target.value)}
                     >
-                      {uniqeIssuers.map(d => <option key={d} value={d}>{d}</option>)}
+                      {uniqueIssuers.map(val => <option key={val} value={val}>{val}</option>)}
                     </select>
                   </td>
                   <td className="py-2 pr-4">
@@ -608,7 +631,7 @@ export function MerchantReportPage() {
                       value={filters.outlet}
                       onChange={(e) => handleFilterChange('outlet', e.target.value)}
                     >
-                      {uniqueOutlets.map(o => <option key={o} value={o}>{o}</option>)}
+                      {uniqueOutlets.map(outlet => <option key={outlet} value={outlet}>{outlet}</option>)}
                     </select>
                   </td>
                   <td className="py-2 pr-4">
