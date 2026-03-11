@@ -56,7 +56,7 @@ export function MerchantReportPage() {
 
   const isRangeExceedingOneMonth = (from, to) => {
     if (!from || !to) return false;
-    return moment(to).isAfter(moment(from).add(1, 'month'));
+    return moment(to).isAfter(moment(from).add(30, 'days'));
   };
 
   const handleCustomDateChange = (field, value) => {
@@ -112,14 +112,15 @@ export function MerchantReportPage() {
   }
   if (key === '7d')
     return {
-      from: moment().subtract(7, 'days').startOf('day').toDate(),
+      from: moment().subtract(6, 'days').startOf('day').toDate(),
       to: endOfToday
     };
-  if (key === '30d')
-    return {
-      from: moment().subtract(30, 'days').startOf('day').toDate(),
-      to: endOfToday
-    };
+
+if (key === '30d')
+  return {
+    from: moment().subtract(29, 'days').startOf('day').toDate(),
+    to: endOfToday
+  };
 
   return { from: dateFrom, to: dateTo };
 };
