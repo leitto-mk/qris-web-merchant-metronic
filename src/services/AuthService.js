@@ -37,7 +37,11 @@ const AuthService = {
       }
 
       localStorage.setItem('qris-web-merchant-data', JSON.stringify(data));
-      toast.success('Selamat Datang, ' + data.kd_user);
+
+      if(data.access_type !== 'TRM')  {
+        toast.success('Selamat Datang, ' + data.kd_user);
+      }
+
       return data;
     } catch (error) {
       const msg = error.response?.data?.error_msg || error.message || 'Login Gagal';
@@ -59,13 +63,85 @@ const AuthService = {
         data: {
           kdUser: data.kd_user,
           new_password: formData.new_password,
-          confirm_new_password: formData.confirm_new_password
+          confirm_new_password: formData.confirm_new_password,
+          signature: localStorage.getItem('qris-web-merchant-signature')
         }
       });
       toast.success(response?.data?.message || 'Reset password Berhasil');
       return response.data;
     } catch (error) {
       const msg = error.response?.data?.error_msg || "Something's Wrong";
+      toast.error(msg);
+      throw new Error(msg);
+    }
+  },
+
+  async registerPublicKey(publicKey) {
+    try {
+      const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
+      const response = await axios({
+        url: API + '/user/register-web-key',
+        headers: getApiHeaders(),
+        responseType: 'json',
+        withCredentials: ENV === 'production',
+        method: 'POST',
+        data: {
+          kdUser: data.kd_user,
+          public_key: publicKey,
+          signature: localStorage.getItem('qris-web-merchant-signature')
+        }
+      });
+      return response.data;
+    } catch (error) {
+      const msg = error.response?.data?.error_msg || 'Gagal mendaftarkan kunci publik';
+      toast.error(msg);
+      throw new Error(msg);
+    }
+  },
+
+  async getChallenge() {
+    try {
+      const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
+      const response = await axios({
+        url: API + '/user/challenge',
+        headers: getApiHeaders(),
+        responseType: 'json',
+        withCredentials: ENV === 'production',
+        method: 'GET',
+        params: {
+          kdUser: data.kd_user
+        }
+      });
+      return response.data; // Expecting { challenge: "..." }
+    } catch (error) {
+      const msg = error.response?.data?.error_msg || 'Gagal mendapatkan challenge';
+      toast.error(msg);
+      throw new Error(msg);
+    }
+  },
+
+  async verifySignature(signature) {
+    try {
+      const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
+      const response = await axios({
+        url: API + '/user/verify-challenge',
+        headers: getApiHeaders(),
+        responseType: 'json',
+        withCredentials: ENV === 'production',
+        method: 'POST',
+        data: {
+          kdUser: data.kd_user,
+          signature: signature
+        }
+      });
+      
+      // Store the verified signature for subsequent requests
+      localStorage.setItem('qris-web-merchant-signature', signature);
+      
+      toast.success('Verifikasi berhasil');
+      return response.data;
+    } catch (error) {
+      const msg = error.response?.data?.error_msg || 'Verifikasi signature gagal';
       toast.error(msg);
       throw new Error(msg);
     }
@@ -84,7 +160,8 @@ const AuthService = {
         method: 'POST',
         data: {
           kdUser: data.kd_user,
-          confirm: password
+          confirm: password,
+          signature: localStorage.getItem('qris-web-merchant-signature')
         }
       });
       toast.success(response?.data?.message || 'Konfirmasi Password Berhasil');
@@ -111,7 +188,8 @@ const AuthService = {
         method: 'POST',
         validateStatus: (code) => [200, 401, 403].includes(code),
         data: {
-          kdUser: data.kd_user
+          kdUser: data.kd_user,
+          signature: localStorage.getItem('qris-web-merchant-signature')
         }
       });
     } finally {
@@ -141,6 +219,7 @@ const AuthService = {
 
   removeSession() {
     localStorage.removeItem('qris-web-merchant-data');
+    localStorage.removeItem('qris-web-merchant-signature');
     if (ENV !== 'production') {
       localStorage.removeItem('qris-web-merchant-token');
     }

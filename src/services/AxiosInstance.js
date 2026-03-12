@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { toast } from 'sonner';
-import AuthService from '@/services/AuthService';
 import { API_URL, APP_ENV } from '@/config/runtime';
+import AuthService from '@/services/AuthService';
+
 
 const API = API_URL + '/api/v1/mrchadmin';
 const ENV = APP_ENV;
@@ -95,20 +96,36 @@ const axiosInstance = () => {
    * Create Axios Instance, setup for any request
    */
   const instance = axios.create({
-      baseURL: API,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(ENV !== 'production' && {
-          'X-BSG-WEBMRCH-TOKEN': localStorage.getItem('qris-web-merchant-token') ?? 'unused',
-        }),
-      },
-      responseType: 'json',
-      responseEncoding: 'utf-8',
-      withCredentials: ENV === 'production',
-      /** Must be synchronous and return boolean */
-      validateStatus: (status) => {
-          return status >= 200 && status < 300;
+    baseURL: API,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(ENV !== 'production' && {
+        'X-BSG-WEBMRCH-TOKEN':
+          localStorage.getItem('qris-web-merchant-token') ?? 'unused',
+      }),
+    },
+    responseType: 'json',
+    responseEncoding: 'utf-8',
+    withCredentials: ENV === 'production',
+    /** Must be synchronous and return boolean */
+    validateStatus: (status) => {
+      return status >= 200 && status < 300;
+    },
+  });
+
+  /**
+   * Intercepts Request to add signature to body if applicable
+   */
+  instance.interceptors.request.use((config) => {
+      const signature = localStorage.getItem('qris-web-merchant-signature');
+      if (signature && ['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase())) {
+          if (config.data && typeof config.data === 'object') {
+              config.data.signature = signature;
+          } else if (!config.data) {
+              config.data = { signature };
+          }
       }
+      return config;
   });
 
 
