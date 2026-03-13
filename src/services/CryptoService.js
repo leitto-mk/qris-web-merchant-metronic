@@ -35,7 +35,7 @@ const CryptoService = {
         hash: 'SHA-256',
       },
       false, // extractable
-      ['sign', 'verify']
+      ['sign']
     );
 
     const publicKeyBuffer = await window.crypto.subtle.exportKey('spki', keyPair.publicKey);
@@ -73,14 +73,13 @@ const CryptoService = {
    * Stores the private key in IndexedDB for persistence.
    * @param {string} kdUser
    * @param {CryptoKey} privateKey
-   * @param {string} publicKey
    */
-  async saveKeys(kdUser, privateKey, publicKey) {
+  async saveKeys(kdUser, privateKey) {
     const db = await this._openDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({ privateKey, publicKey }, kdUser);
+      const request = store.put({ kdUser, privateKey });
       request.onsuccess = () => resolve();
       request.onerror = (event) => reject(event.target.error);
     });
