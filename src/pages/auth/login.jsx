@@ -93,14 +93,15 @@ export function LoginPage() {
     return { verifyRes, privateKey };
   };
 
-  const performTerminalRegistration = async (kdUser, access_type) => {
+  const performTerminalRegistration = async (kdUser, access_type, should_regenerate) => {
     if(access_type === 'TRM') {
       setIsVerifying(true);
 
-      let keys = await CryptoService.getKeys(kdUser);
+      let keys = await CryptoService.getKeys();
+      let devOwner = keys?.kdUser;
       let privateKey = keys?.privateKey;
 
-      if (!keys) {
+      if (!keys || should_regenerate) {
         const { verifyRes } = await performKeyPairFlow(kdUser);
         if (verifyRes.error === 'CHALLENGE_EXPIRED') {
           AuthService.removeSession();
@@ -113,6 +114,10 @@ export function LoginPage() {
         }
 
         return; // Success
+      }
+
+      if(kdUser !== devOwner) {
+        throw new Error('User tidak terdaftar untuk Device ini.');
       }
 
       // 2. Get Challenge from Backend
@@ -154,16 +159,20 @@ export function LoginPage() {
     try {
       const data = await AuthService.login({ username: values.username.toUpperCase(), password: values.password });
 
-      if(data.status === 3) {
-        if(data.access_type === 'TRM') {
-          await performTerminalRegistration(data.kd_user, data.access_type);
-          navigate('/terminal/outlet');
-          return;
-        }
-
+      if(data.web_status === 'INACTIVE') {
         setUserData(data);
         setReset(true);
         return;
+      }
+
+      //Make sure it tries to log in on the same registered device
+      if(data.access_type === 'TRM') {
+        const storedKeys = await CryptoService.getKeys();
+        const kdUser = storedKeys?.kdUser;
+
+        if(!storedKeys || kdUser !== data.kd_user) {
+          throw new Error('User Terminal tidak terdaftar untuk Device ini.');
+        }
       }
 
       navigate('/terminal/outlet');
@@ -189,7 +198,12 @@ export function LoginPage() {
       const kdUser = userData?.kd_user;
       const access_type = userData?.access_type;
 
-      await performTerminalRegistration(kdUser, access_type);
+      await performTerminalRegistration(kdUser, access_type, true);
+
+      if(access_type === 'TRM') {
+        navigate('/terminal/outlet');
+        return;
+      }
 
       const currentUsername = form.getValues('username');
 
@@ -223,15 +237,8 @@ export function LoginPage() {
         kdUser = JSON.parse(sessionData).kd_user;
       } else {
         // If session data is missing, try to find kdUser from stored keys
-        const storedKeys = await CryptoService.getAllStoredKeys();
-        
-        if (storedKeys && storedKeys.length > 0) {
-          // Assume the first key found is the one to use if multiple exist, 
-          // or just pick one since we don't have username yet.
-          kdUser = storedKeys[0];
-          // We should probably store a "last used kdUser" or something if we want to be robust,
-          // but for now, picking the first one available in IndexedDB is a reasonable fallback.
-        }
+        const storedKeys = await CryptoService.getKeys();
+        kdUser = storedKeys?.kdUser;
       }
 
       if (!kdUser) {
@@ -261,7 +268,6 @@ export function LoginPage() {
 
       // 4. Verify Signature with Backend
       const { error } = await AuthService.verifySignature(signature);
-      console.log(error);
       let verifyError;
       if (error === 'IS_REVOKED') {
         const { verifyRes } = await performKeyPairFlow(kdUser);

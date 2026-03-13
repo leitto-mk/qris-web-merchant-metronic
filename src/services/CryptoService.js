@@ -3,6 +3,7 @@
  */
 const DB_NAME = 'BSG-MRCH-STORE';
 const STORE_NAME = 'bsg-webmrch-key';
+const KEY_NAME = 'bsg-web-assigned-trm';
 
 const CryptoService = {
   /**
@@ -79,7 +80,7 @@ const CryptoService = {
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({ kdUser, privateKey });
+      const request = store.put({ kdUser: kdUser, privateKey }, KEY_NAME);
       request.onsuccess = () => resolve();
       request.onerror = (event) => reject(event.target.error);
     });
@@ -90,19 +91,19 @@ const CryptoService = {
    * @param {string} kdUser
    * @returns {Promise<{privateKey: CryptoKey, publicKey: string} | null>}
    */
-  async getKeys(kdUser) {
+  async getKeys() {
     const db = await this._openDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.get(kdUser);
+      const request = store.get(KEY_NAME);
       request.onsuccess = (event) => resolve(event.target.result || null);
       request.onerror = (event) => reject(event.target.error);
     });
   },
 
   /**
-   * Returns all keys (kdUser) stored in IndexedDB.
+   * Returns all keys stored in IndexedDB.
    * @returns {Promise<string[]>}
    */
   async getAllStoredKeys() {
