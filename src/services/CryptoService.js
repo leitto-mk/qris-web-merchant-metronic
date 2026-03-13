@@ -34,7 +34,7 @@ const CryptoService = {
         publicExponent: new Uint8Array([1, 0, 1]),
         hash: 'SHA-256',
       },
-      true, // extractable
+      false, // extractable
       ['sign', 'verify']
     );
 

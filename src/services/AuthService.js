@@ -27,16 +27,7 @@ const AuthService = {
       });
       const data = response.data.data;
 
-      if (ENV !== 'production') {
-        const token = response.headers['x-bsg-webmrch-token'];
-        if (!token) {
-          // In development, we expect a token. Fail fast if it's missing.
-          throw new Error('Development login response did not include the required auth token.');
-        }
-        localStorage.setItem('qris-web-merchant-token', token);
-      }
-
-      localStorage.setItem('qris-web-merchant-data', JSON.stringify(data));
+      this.storeMerchantData(response, data);
 
       if(data.access_type !== 'TRM')  {
         toast.success('Selamat Datang, ' + data.kd_user);
@@ -63,8 +54,7 @@ const AuthService = {
         data: {
           kdUser: data.kd_user,
           new_password: formData.new_password,
-          confirm_new_password: formData.confirm_new_password,
-          signature: localStorage.getItem('qris-web-merchant-signature')
+          confirm_new_password: formData.confirm_new_password
         }
       });
       toast.success(response?.data?.message || 'Reset password Berhasil');
@@ -87,8 +77,7 @@ const AuthService = {
         method: 'POST',
         data: {
           kdUser: data.kd_user,
-          public_key: publicKey,
-          signature: localStorage.getItem('qris-web-merchant-signature')
+          public_key: publicKey
         }
       });
       return response.data;
@@ -134,16 +123,15 @@ const AuthService = {
           signature: signature
         }
       });
-      
-      // Store the verified signature for subsequent requests
-      localStorage.setItem('qris-web-merchant-signature', signature);
+
+      this.storeMerchantData(response, data);
       
       toast.success('Verifikasi berhasil');
-      return response.data;
+      return { success: true };
     } catch (error) {
-      const msg = error.response?.data?.error_msg || 'Verifikasi signature gagal';
+      const msg = error.response?.data?.message || 'Verifikasi signature gagal';
       toast.error(msg);
-      throw new Error(msg);
+      return { error: msg }
     }
   },
 
@@ -160,8 +148,7 @@ const AuthService = {
         method: 'POST',
         data: {
           kdUser: data.kd_user,
-          confirm: password,
-          signature: localStorage.getItem('qris-web-merchant-signature')
+          confirm: password
         }
       });
       toast.success(response?.data?.message || 'Konfirmasi Password Berhasil');
@@ -188,13 +175,25 @@ const AuthService = {
         method: 'POST',
         validateStatus: (code) => [200, 401, 403].includes(code),
         data: {
-          kdUser: data.kd_user,
-          signature: localStorage.getItem('qris-web-merchant-signature')
+          kdUser: data.kd_user
         }
       });
     } finally {
       this.removeSession();
     }
+  },
+
+  storeMerchantData(response, data) {
+    if (ENV !== 'production') {
+      const token = response.headers['x-bsg-webmrch-token'];
+      if (!token) {
+        // In development, we expect a token. Fail fast if it's missing.
+        throw new Error('Development login response did not include the required auth token.');
+      }
+      localStorage.setItem('qris-web-merchant-token', token);
+    }
+
+    localStorage.setItem('qris-web-merchant-data', JSON.stringify(data));
   },
 
   isSessionValid() {

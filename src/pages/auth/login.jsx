@@ -21,7 +21,7 @@ export function LoginPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [showAccessTypeSelection, setShowAccessTypeSelection] = useState(false);
 
-  // Set custom browser tab title and check for existing keys
+  // Set the browser tab title and check for existing keys
   useEffect(() => {
     document.title = reset ? 'Pergantian Password | BSGMerchant' : 'Login | BSGMerchant';
 
@@ -68,24 +68,51 @@ export function LoginPage() {
     },
   });
 
+  const performKeyPairFlow = async (userKd) => {
+    const generated = await CryptoService.generateKeyPair();
+    const publicKey = generated.publicKey;
+    const privateKey = generated.privateKey;
+
+    // 1. Submit Public Key to Backend
+    await AuthService.registerPublicKey(publicKey);
+
+    // Save to IndexedDB
+    await CryptoService.saveKeys(userKd, privateKey, publicKey);
+
+    // 2. Get Challenge from Backend
+    const { challenge: newChallenge } = await AuthService.getChallenge();
+
+    // 3. Sign Challenge with Private Key
+    const newSignature = await CryptoService.signChallenge(
+      privateKey,
+      newChallenge,
+    );
+
+    // 4. Verify Signature with Backend
+    const verifyRes = await AuthService.verifySignature(newSignature);
+    return { verifyRes, privateKey };
+  };
+
   const performTerminalRegistration = async (kdUser, access_type) => {
     if(access_type === 'TRM') {
       setIsVerifying(true);
 
       let keys = await CryptoService.getKeys(kdUser);
-      let publicKey = keys?.publicKey;
       let privateKey = keys?.privateKey;
 
       if (!keys) {
-        const generated = await CryptoService.generateKeyPair();
-        publicKey = generated.publicKey;
-        privateKey = generated.privateKey;
+        const { verifyRes } = await performKeyPairFlow(kdUser);
+        if (verifyRes.error === 'CHALLENGE_EXPIRED') {
+          AuthService.removeSession();
+          setShowAccessTypeSelection(true);
+          throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
+        }
 
-        // 1. Submit Public Key to Backend
-        await AuthService.registerPublicKey(publicKey);
+        if (verifyRes.error) {
+          throw new Error(verifyRes.error);
+        }
 
-        // Save to IndexedDB
-        await CryptoService.saveKeys(kdUser, privateKey, publicKey);
+        return; // Success
       }
 
       // 2. Get Challenge from Backend
@@ -98,7 +125,26 @@ export function LoginPage() {
       );
 
       // 4. Verify Signature with Backend
-      await AuthService.verifySignature(signature);
+      const { error } = await AuthService.verifySignature(signature);
+      let verifyError;
+
+      if (error === 'IS_REVOKED') {
+        const { verifyRes } = await performKeyPairFlow(kdUser);
+        verifyError = verifyRes.error;
+      }
+
+      if (error === 'CHALLENGE_EXPIRED' || (verifyError && verifyError === 'CHALLENGE_EXPIRED')) {
+        AuthService.removeSession();
+        setShowAccessTypeSelection(true);
+        throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
+      }
+
+      if (error && error !== 'IS_REVOKED' && error !== 'CHALLENGE_EXPIRED') {
+        throw new Error(error);
+      }
+      if (verifyError) {
+        throw new Error(verifyError);
+      }
     }
   };
 
@@ -214,7 +260,23 @@ export function LoginPage() {
       );
 
       // 4. Verify Signature with Backend
-      await AuthService.verifySignature(signature);
+      const { error } = await AuthService.verifySignature(signature);
+      console.log(error);
+      let verifyError;
+      if (error === 'IS_REVOKED') {
+        const { verifyRes } = await performKeyPairFlow(kdUser);
+        verifyError = verifyRes.error;
+      }
+
+      if (error === 'CHALLENGE_EXPIRED' || (verifyError && verifyError === 'CHALLENGE_EXPIRED')) {
+        AuthService.removeSession();
+        setShowAccessTypeSelection(true);
+        throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
+      } else if (error && error !== 'IS_REVOKED') {
+        throw new Error(error);
+      } else if (verifyError) {
+        throw new Error(verifyError);
+      }
 
       navigate('/terminal/outlet');
     } catch (e) {
