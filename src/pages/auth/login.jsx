@@ -180,6 +180,7 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Login failed');
       setShowAccessTypeSelection(false);
+      localStorage.removeItem('qris-web-merchant-data');
     } finally {
       setLoading(false);
       setIsVerifying(false);
@@ -219,6 +220,7 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Browser tidak terdaftar pada User ini, pastikan Browser sesuai atau silahkan melakukan request Reset Device');
       setShowAccessTypeSelection(false);
+      localStorage.removeItem('qris-web-merchant-data');
     } finally {
       setLoading(false);
       setIsVerifying(false);
@@ -289,6 +291,7 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Verifikasi Terminal Gagal');
       setShowAccessTypeSelection(false);
+      localStorage.removeItem('qris-web-merchant-data');
     } finally {
       setLoading(false);
       setIsVerifying(false);
