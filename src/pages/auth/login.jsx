@@ -68,90 +68,6 @@ export function LoginPage() {
     },
   });
 
-  const performKeyPairFlow = async (userKd) => {
-    const generated = await CryptoService.generateKeyPair();
-    const publicKey = generated.publicKey;
-    const privateKey = generated.privateKey;
-
-    // 1. Submit Public Key to Backend
-    await AuthService.registerPublicKey(publicKey);
-
-    // Save to IndexedDB
-    await CryptoService.saveKeys(userKd, privateKey, publicKey);
-
-    // 2. Get Challenge from Backend
-    const { challenge: newChallenge } = await AuthService.getChallenge();
-
-    // 3. Sign Challenge with Private Key
-    const newSignature = await CryptoService.signChallenge(
-      privateKey,
-      newChallenge,
-    );
-
-    // 4. Verify Signature with Backend
-    const verifyRes = await AuthService.verifySignature(newSignature);
-    return { verifyRes, privateKey };
-  };
-
-  const performTerminalRegistration = async (kdUser, access_type, should_regenerate) => {
-    if(access_type === 'TRM') {
-      setIsVerifying(true);
-
-      let keys = await CryptoService.getKeys();
-      let devOwner = keys?.kdUser;
-      let privateKey = keys?.privateKey;
-
-      // 1. Generate the Keys
-      if (!keys || should_regenerate) {
-        await CryptoService.clearKeys();
-
-        const { verifyRes } = await performKeyPairFlow(kdUser);
-        if (verifyRes.error === 'CHALLENGE_EXPIRED') {
-          AuthService.removeSession();
-          setShowAccessTypeSelection(true);
-          throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
-        }
-
-        if (verifyRes.error) {
-          throw new Error(verifyRes.error);
-        }
-        
-        return; // Success
-      }
-
-      if(kdUser !== devOwner) {
-        throw new Error('User tidak terdaftar untuk Device ini.');
-      }
-
-      // 2. Get Challenge from Backend
-      const { challenge } = await AuthService.getChallenge();
-
-      // 3. Sign Challenge with Private Key
-      const signature = await CryptoService.signChallenge(
-        privateKey,
-        challenge,
-      );
-
-      // 4. Verify Signature with Backend
-      const { error } = await AuthService.verifySignature(signature);
-
-      if (error === 'IS_REVOKED') {
-        await CryptoService.clearKeys();
-        throw new Error('Device Terminal ini telah di reset. Silahkan login kembali atau kontak Admin untuk pengaktifan Terminal');
-      }
-
-      if (error === 'CHALLENGE_EXPIRED') {
-        AuthService.removeSession();
-        setShowAccessTypeSelection(true);
-        throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
-      }
-
-      if (error) {
-        throw new Error(error);
-      }
-    }
-  };
-
   const handleLogin = async (values) => {
     setInvalid(false);
     setLoading(true);
@@ -180,7 +96,7 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Login failed');
       setShowAccessTypeSelection(false);
-      AuthService.removeSession('qris-web-merchant-data');
+      AuthService.removeSession();
     } finally {
       setLoading(false);
       setIsVerifying(false);
@@ -199,9 +115,8 @@ export function LoginPage() {
       const kdUser = userData?.kd_user;
       const access_type = userData?.access_type;
 
-      await performTerminalRegistration(kdUser, access_type, true);
-
       if(access_type === 'TRM') {
+        await performTerminalRegistration(kdUser, access_type, true);
         navigate('/terminal/outlet');
         return;
       }
@@ -220,7 +135,7 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Browser tidak terdaftar pada User ini, pastikan Browser sesuai atau silahkan melakukan request Reset Device');
       setShowAccessTypeSelection(false);
-      AuthService.removeSession('qris-web-merchant-data');
+      AuthService.removeSession();
     } finally {
       setLoading(false);
       setIsVerifying(false);
@@ -234,7 +149,7 @@ export function LoginPage() {
     try {
       const sessionData = AuthService.retrieveSession();
       let kdUser;
-      
+
       if (sessionData) {
         kdUser = JSON.parse(sessionData).kd_user;
       } else {
@@ -244,19 +159,26 @@ export function LoginPage() {
       }
 
       if (!kdUser) {
-        throw new Error('Sesi tidak ditemukan dan tidak ada device terdaftar. Silahkan login sebagai Admin terlebih dahulu.');
+        throw new Error(
+          'Sesi tidak ditemukan dan tidak ada device terdaftar. Silahkan login sebagai Admin terlebih dahulu.',
+        );
       }
 
       let keys = await CryptoService.getKeys(kdUser);
       let privateKey = keys?.privateKey;
 
       if (!keys) {
-        throw new Error('Device tidak terdaftar. Silahkan login sebagai Admin untuk mendaftarkan device ini.');
+        throw new Error(
+          'Device tidak terdaftar. Silahkan login sebagai Admin untuk mendaftarkan device ini.',
+        );
       }
 
       // Ensure kd_user is in local storage if it was missing but found in IndexedDB
       if (!sessionData) {
-        localStorage.setItem('qris-web-merchant-data', JSON.stringify({ kd_user: kdUser }));
+        localStorage.setItem(
+          'qris-web-merchant-data',
+          JSON.stringify({ kd_user: kdUser }),
+        );
       }
 
       // 2. Get Challenge from Backend
@@ -269,31 +191,120 @@ export function LoginPage() {
       );
 
       // 4. Verify Signature with Backend
-      const { error } = await AuthService.verifySignature(signature);
-
-      if (error === 'IS_REVOKED') {
-        await CryptoService.clearKeys();
-        throw new Error('Device Terminal ini telah di reset. Silahkan login kembali atau kontak Admin untuk pengaktifan Terminal');
-      }
-
-      if (error === 'CHALLENGE_EXPIRED') {
-        AuthService.removeSession();
-        setShowAccessTypeSelection(true);
-        throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
-      } else if (error) {
-        throw new Error(error);
-      }
+      await AuthService.verifySignature(signature);
 
       navigate('/terminal/outlet');
     } catch (e) {
-      setInvalid(true);
-      setInvalidMessage(e?.message || 'Verifikasi Terminal Gagal');
+      AuthService.removeSession();
       setShowAccessTypeSelection(false);
-      AuthService.removeSession('qris-web-merchant-data');
+      setInvalid(true);
+
+      switch (e.message) {
+        case 'IS_REVOKED':
+        case 'INVALID_SIGNATURE':
+          await CryptoService.clearKeys();
+          setInvalidMessage(
+            'Device Terminal ini telah di reset. Silahkan login kembali atau kontak Admin untuk pengaktifan Terminal',
+          );
+          break;
+        case 'CHALLENGE_EXPIRED':
+          setInvalidMessage('Sesi Kadaluarsa. Silahkan login kembali.');
+          break;
+        default:
+          setInvalidMessage(e?.message || 'Verifikasi Terminal Gagal');
+          break;
+      }
     } finally {
       setLoading(false);
       setIsVerifying(false);
     }
+  };
+
+  const performKeyPairFlow = async (userKd) => {
+    const generated = await CryptoService.generateKeyPair();
+    const publicKey = generated.publicKey;
+    const privateKey = generated.privateKey;
+
+    // 1. Submit Public Key to Backend
+    await AuthService.registerPublicKey(publicKey);
+
+    // Save to IndexedDB
+    await CryptoService.saveKeys(userKd, privateKey, publicKey);
+
+    // 2. Get Challenge from Backend
+    const { challenge: newChallenge } = await AuthService.getChallenge();
+
+    // 3. Sign Challenge with Private Key
+    const newSignature = await CryptoService.signChallenge(
+      privateKey,
+      newChallenge,
+    );
+
+    // 4. Verify Signature with Backend
+    const verifyRes = await AuthService.verifySignature(newSignature);
+    return { verifyRes, privateKey };
+  };
+
+  const performTerminalRegistration = async (kdUser, access_type, should_regenerate) => {
+      try {
+        setIsVerifying(true);
+
+        let keys = await CryptoService.getKeys();
+        let devOwner = keys?.kdUser;
+        let privateKey = keys?.privateKey;
+
+        // 1. Generate the Keys
+        if (!keys || should_regenerate) {
+          const { verifyRes } = await performKeyPairFlow(kdUser);
+          if (verifyRes.error === 'CHALLENGE_EXPIRED') {
+            AuthService.removeSession();
+            setShowAccessTypeSelection(true);
+            throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
+          }
+
+          if (verifyRes.error) {
+            throw new Error(verifyRes.error);
+          }
+
+          return; // Success
+        }
+
+        if(kdUser !== devOwner) {
+          throw new Error('User tidak terdaftar untuk Device ini.');
+        }
+
+        // 2. Get Challenge from Backend
+        const { challenge } = await AuthService.getChallenge();
+
+        // 3. Sign Challenge with Private Key
+        const signature = await CryptoService.signChallenge(
+          privateKey,
+          challenge,
+        );
+
+        // 4. Verify Signature with Backend
+        await AuthService.verifySignature(signature);
+      } catch (e) {
+        AuthService.removeSession();
+        setShowAccessTypeSelection(false);
+        setInvalid(true);
+
+        switch(e.message) {
+          case 'IS_REVOKED':
+          case 'INVALID_SIGNATURE':
+            await CryptoService.clearKeys();
+            setInvalidMessage('Device Terminal ini telah di reset. Silahkan login kembali atau kontak Admin untuk pengaktifan Terminal');
+            break;
+          case 'CHALLENGE_EXPIRED':
+            setInvalidMessage('Sesi Kadaluarsa. Silahkan login kembali.');
+            break;
+          default:
+            setInvalidMessage(e?.message || 'Verifikasi Terminal Gagal');
+            break;
+        }
+      } finally {
+        setIsVerifying(false);
+      }
   };
 
   return (

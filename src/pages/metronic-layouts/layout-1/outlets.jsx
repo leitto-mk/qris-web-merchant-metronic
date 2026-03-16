@@ -1124,7 +1124,7 @@ function buildActionsMenu(row, openModal) {
             onClick={() => openModal('ResetDeviceMerchantModalContent', row)}
           >
             <UserRoundPen />
-            <span>Reset Device Mobile</span>
+            <span>Reset Device</span>
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>

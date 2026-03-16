@@ -35,8 +35,7 @@ const AuthService = {
 
       return data;
     } catch (error) {
-      const msg = error.response?.data?.error_msg || error.message || 'Login Gagal';
-      toast.error(msg);
+      const msg = error.response?.data?.error_msg || 'Login Gagal';
       throw new Error(msg); // Re-throw to allow UI to handle login failure
     }
   },
@@ -61,7 +60,6 @@ const AuthService = {
       return response.data;
     } catch (error) {
       const msg = error.response?.data?.error_msg || "Something's Wrong";
-      toast.error(msg);
       throw new Error(msg);
     }
   },
@@ -83,7 +81,6 @@ const AuthService = {
       return response.data;
     } catch (error) {
       const msg = error.response?.data?.error_msg || 'Gagal mendaftarkan kunci publik';
-      toast.error(msg);
       throw new Error(msg);
     }
   },
@@ -104,7 +101,6 @@ const AuthService = {
       return response.data; // Expecting { challenge: "..." }
     } catch (error) {
       const msg = error.response?.data?.error_msg || 'Gagal mendapatkan challenge';
-      toast.error(msg);
       throw new Error(msg);
     }
   },
@@ -127,11 +123,10 @@ const AuthService = {
       this.storeMerchantData(response, data);
       
       toast.success('Verifikasi berhasil');
-      return { success: true };
+      return response.data;
     } catch (error) {
-      const msg = error.response?.data?.error_msg;
-      toast.error(msg);
-      return { error: msg }
+      const errorMsg = error.response?.data?.error_msg || 'Verifikasi Gagal';
+      throw new Error(errorMsg);
     }
   },
 
@@ -158,7 +153,6 @@ const AuthService = {
         AuthService.removeSession();
       }
       const errMsg = error?.response?.data?.error_msg || error?.message || "Something's Wrong";
-      toast.error(errMsg);
       throw new Error(errMsg);
     }
   },
