@@ -344,11 +344,10 @@ export function TerminalPage() {
                 size="md"
                 appearance="light"
                 variant="success"
-                className="uppercase"
+                className="uppercase font-bold"
               >
                 {session?.kd_user || 'N/A'}
               </Badge>
-              {outlet?.nmid}
             </ToolbarDescription>
           </ToolbarHeading>
           <ToolbarActions>
