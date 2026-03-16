@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
-import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, MonitorSmartphone, Smartphone, Monitor, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X } from 'lucide-react';
+import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, MonitorSmartphone, Smartphone, Monitor, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X, RotateCcw } from 'lucide-react';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Stepper, StepperContent, StepperIndicator, StepperItem, StepperNav, StepperPanel, StepperSeparator, StepperTitle, StepperTrigger } from '@/components/ui/stepper.jsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-function buildExpandedDetails(merchant, data) {
+function buildExpandedDetails(merchant, data, openModal) {
   const merchantUsersByKdUser = new Map(
     (data?.merchantUser ?? [])
       .filter((item) => item?.kd_user)
@@ -291,11 +291,11 @@ function buildExpandedDetails(merchant, data) {
                       <div className="flex flex-row gap-3">
                         <div className="flex items-start w-full gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
                           <Smartphone className="mt-0.5 size-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="text-xs uppercase tracking-wide text-muted-foreground">
                               Device
                             </div>
-                            <div className="flex flex-wrap gap-2 mt-1">
+                            <div className="flex flex-row items-center justify-between mt-1">
                               <Badge
                                 variant={
                                   terminal.deviceLabel === 'N/A'
@@ -308,16 +308,43 @@ function buildExpandedDetails(merchant, data) {
                                   {terminal.deviceLabel}
                                 </span>
                               </Badge>
+                              {terminal.deviceLabel !== 'N/A' && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        mode="icon"
+                                        className="size-6 hover:bg-white hover:text-red-500  text-red-600 bg-red-50"
+                                        onClick={() =>
+                                          openModal(
+                                            'ResetDeviceMerchantModalContent',
+                                            data,
+                                            {
+                                              resetType: 'MOB',
+                                              XID: terminal.XID,
+                                            },
+                                          )
+                                        }
+                                      >
+                                        <RotateCcw className="size-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      <p>Reset Device</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-start w-full gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
                           <Monitor className="mt-0.5 size-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="text-xs uppercase tracking-wide text-muted-foreground">
                               Web
                             </div>
-                            <div className="flex flex-wrap gap-2 mt-1">
+                            <div className="flex flex-row items-center justify-between mt-1">
                               <Badge
                                 variant={
                                   terminal.webLabel === 'INACTIVE'
@@ -330,6 +357,33 @@ function buildExpandedDetails(merchant, data) {
                                   {terminal.webLabel}
                                 </span>
                               </Badge>
+                              {terminal.webLabel !== 'INACTIVE' && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        mode="icon"
+                                        className="size-6 hover:bg-white hover:text-red-500  text-red-600 bg-red-50"
+                                        onClick={() =>
+                                          openModal(
+                                            'ResetDeviceMerchantModalContent',
+                                            data,
+                                            {
+                                              resetType: 'WEB',
+                                              XID: terminal.XID,
+                                            },
+                                          )
+                                        }
+                                      >
+                                        <RotateCcw className="size-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      <p>Reset Web</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -810,11 +864,13 @@ const ModalContents = {
       </div>
     );
   },
-  ResetDeviceMerchantModalContent: ({ selected, closeModal }) => {
+  ResetDeviceMerchantModalContent: ({ selected, closeModal, initialState }) => {
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
-    const [resetDeviceXID, setResetDeviceXID] = useState('');
-    const [resetType, setResetType] = useState('MOB');
+    const [resetDeviceXID, setResetDeviceXID] = useState(
+      initialState?.XID ?? '',
+    );
+    const [resetType, setResetType] = useState(initialState?.resetType ?? 'MOB');
     const [showForm, setShowForm] = useState(false);
 
     const merchantUsersByKdUser = new Map(
@@ -1144,6 +1200,7 @@ export function OutletPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
   const [currentModalKey, setCurrentModalKey] = useState(null);
+  const [modalInitialState, setModalInitialState] = useState(null);
 
   // Modal metadata for dynamic titles and descriptions
   const modalMeta = useMemo(
@@ -1180,9 +1237,10 @@ export function OutletPage() {
       };
     }, [currentModalKey, selectedRow, modalMeta]);
 
-  const openModal = useCallback((key, row) => {
+  const openModal = useCallback((key, row, initialState = null) => {
     setSelectedRow(row?.original ?? row);
     setCurrentModalKey(key);
+    setModalInitialState(initialState);
     setIsModalOpen(true);
   }, []);
 
@@ -1190,6 +1248,7 @@ export function OutletPage() {
     setIsModalOpen(false);
     setSelectedRow(null);
     setCurrentModalKey(null);
+    setModalInitialState(null);
   }, []);
 
   const columns = useMemo(
@@ -1317,7 +1376,7 @@ export function OutletPage() {
         meta: {
           headerClassName: 'whitespace-nowrap w-0',
           cellClassName: 'whitespace-nowrap w-0',
-          expandedContent: (row) => buildExpandedDetails(merchant, row),
+          expandedContent: (row) => buildExpandedDetails(merchant, row, openModal),
         },
       },
     ],
@@ -1386,6 +1445,7 @@ export function OutletPage() {
           if (!open) {
             setSelectedRow(null);
             setCurrentModalKey(null);
+            setModalInitialState(null);
           }
         }}
       >
@@ -1397,7 +1457,11 @@ export function OutletPage() {
               ? ModalContents[currentModalKey]
               : null;
             return ActiveModal ? (
-              <ActiveModal selected={selectedRow} closeModal={closeModal} />
+              <ActiveModal 
+                selected={selectedRow} 
+                closeModal={closeModal} 
+                initialState={modalInitialState} 
+              />
             ) : null;
           })()}
         </DialogContent>
