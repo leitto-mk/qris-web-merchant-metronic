@@ -253,7 +253,7 @@ function buildExpandedDetails(merchant, data) {
                 {terminalDetails.map((terminal) => (
                   <div
                     key={terminal.XID || terminal.TerminalID}
-                    className="group rounded-2xl border border-border/60 bg-gradient-to-br from-background to-muted/30 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                    className="group rounded-2xl border border-border/60 bg-gradient-to-br from-background to-muted/30 p-4 shadow-sm transition-all duration-200 hover:-translate-y-2 hover:shadow-md"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -826,6 +826,7 @@ const ModalContents = {
         return {
           ...item,
           device: matchedMerchantUser?.device ?? matchedMerchantUser?.Device ?? '',
+          webStatus: matchedMerchantUser?.web_status ?? 'INACTIVE',
         };
       });
 
@@ -927,7 +928,7 @@ const ModalContents = {
                   <SelectContent className="w-full min-w-[16rem]">
                     {terminalOptions.map((item) => (
                       <SelectItem key={item.XID} value={item.XID}>
-                        {`[${item.TerminalID}] ${(item.kd_user || '').toUpperCase()} ${item.device ? ` • ${item.device}` : ''}`}
+                        {`[${item.TerminalID}] ${(item.kd_user || '').toUpperCase()} ${item.device ? ` • Device: ${item.device}` : ''} | Web: ${item.webStatus}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
