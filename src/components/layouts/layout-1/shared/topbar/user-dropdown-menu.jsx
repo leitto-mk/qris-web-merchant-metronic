@@ -1,42 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  BetweenHorizontalStart,
-  Coffee,
-  CreditCard,
-  FileText,
-  Globe,
-  IdCard,
-  LoaderCircleIcon,
-  LockIcon,
-  Moon,
-  RotateCcw,
-  Settings,
-  Shield,
-  SquareCode,
-  UserCircle,
-  Users,
-} from 'lucide-react';
+import { useAppData } from '@/context/AppDataContext.jsx';
+import { BetweenHorizontalStart, Coffee, CreditCard, FileText, Globe, IdCard, LoaderCircleIcon, LockIcon, Moon, RotateCcw, Settings, Shield, SquareCode, UserCircle, Users } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Link, useNavigate } from 'react-router-dom';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import AuthService from '@/services/AuthService.js';
+import axiosInstance from '@/services/AxiosInstance.js';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Switch } from '@/components/ui/switch';
-import axiosInstance from '@/services/AxiosInstance.js';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
-import { useAppData } from '@/context/AppDataContext.jsx';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Switch } from '@/components/ui/switch';
 
 
 const I18N_LANGUAGES = [
@@ -59,7 +34,7 @@ export function UserDropdownMenu({ trigger }) {
   const { outlets } = useAppData();
   // const currentLanguage = I18N_LANGUAGES[0];
   const { theme, setTheme } = useTheme();
-  const session = JSON.parse(AuthService.retrieveSession());
+  const session = AuthService.retrieveSession();
   // Separate loading states so logout and reset don't share the same flag
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);

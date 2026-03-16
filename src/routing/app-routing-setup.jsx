@@ -23,7 +23,7 @@ function RequireAuth({ children }) {
 }
 
 export function AppRoutingSetup() {
-  const session = JSON.parse(AuthService.retrieveSession());
+  const session = AuthService.retrieveSession();
   const isAdmin = session?.access_type === 'ADM';
 
   return (
