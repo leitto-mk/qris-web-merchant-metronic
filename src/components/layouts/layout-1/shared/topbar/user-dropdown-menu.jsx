@@ -59,7 +59,7 @@ export function UserDropdownMenu({ trigger }) {
   const { outlets } = useAppData();
   // const currentLanguage = I18N_LANGUAGES[0];
   const { theme, setTheme } = useTheme();
-  const session = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
+  const session = JSON.parse(AuthService.retrieveSession());
   // Separate loading states so logout and reset don't share the same flag
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);

@@ -177,7 +177,7 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Login failed');
       setShowAccessTypeSelection(false);
-      localStorage.removeItem('qris-web-merchant-data');
+      AuthService.removeSession('qris-web-merchant-data');
     } finally {
       setLoading(false);
       setIsVerifying(false);
@@ -217,7 +217,7 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Browser tidak terdaftar pada User ini, pastikan Browser sesuai atau silahkan melakukan request Reset Device');
       setShowAccessTypeSelection(false);
-      localStorage.removeItem('qris-web-merchant-data');
+      AuthService.removeSession('qris-web-merchant-data');
     } finally {
       setLoading(false);
       setIsVerifying(false);
@@ -229,7 +229,7 @@ export function LoginPage() {
     setLoading(true);
     setIsVerifying(true);
     try {
-      const sessionData = localStorage.getItem('qris-web-merchant-data');
+      const sessionData = AuthService.retrieveSession();
       let kdUser;
       
       if (sessionData) {
@@ -286,7 +286,7 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Verifikasi Terminal Gagal');
       setShowAccessTypeSelection(false);
-      localStorage.removeItem('qris-web-merchant-data');
+      AuthService.removeSession('qris-web-merchant-data');
     } finally {
       setLoading(false);
       setIsVerifying(false);

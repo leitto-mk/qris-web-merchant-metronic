@@ -129,7 +129,7 @@ const AuthService = {
       toast.success('Verifikasi berhasil');
       return { success: true };
     } catch (error) {
-      const msg = error.response?.data?.message || 'Verifikasi signature gagal';
+      const msg = error.response?.data?.error_msg;
       toast.error(msg);
       return { error: msg }
     }

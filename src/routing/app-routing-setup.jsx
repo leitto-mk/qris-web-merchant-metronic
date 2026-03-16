@@ -23,7 +23,7 @@ function RequireAuth({ children }) {
 }
 
 export function AppRoutingSetup() {
-  const session = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
+  const session = JSON.parse(AuthService.retrieveSession());
   const isAdmin = session?.access_type === 'ADM';
 
   return (
