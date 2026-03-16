@@ -127,8 +127,30 @@ const CryptoService = {
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.count();
+      request.oncomplete = () => db.close();
       request.onsuccess = (event) => resolve(event.target.result > 0);
       request.onerror = (event) => reject(event.target.error);
+    });
+  },
+
+  /**
+   * Clears the IndexedDB store and deletes the private key.
+   * @returns {Promise<void>}
+   */
+  async clearKeys() {
+    const db = await this._openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.clear();
+      request.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      request.onerror = (event) => {
+        db.close();
+        reject(event.target.error);
+      };
     });
   }
 };

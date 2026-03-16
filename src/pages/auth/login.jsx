@@ -131,24 +131,20 @@ export function LoginPage() {
 
       // 4. Verify Signature with Backend
       const { error } = await AuthService.verifySignature(signature);
-      let verifyError;
 
       if (error === 'IS_REVOKED') {
-        const { verifyRes } = await performKeyPairFlow(kdUser);
-        verifyError = verifyRes.error;
+        await CryptoService.clearKeys();
+        throw new Error('Device Terminal ini telah di reset. Silahkan login kembali atau kontak Admin untuk pengaktifan Terminal');
       }
 
-      if (error === 'CHALLENGE_EXPIRED' || (verifyError && verifyError === 'CHALLENGE_EXPIRED')) {
+      if (error === 'CHALLENGE_EXPIRED') {
         AuthService.removeSession();
         setShowAccessTypeSelection(true);
         throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
       }
 
-      if (error && error !== 'IS_REVOKED' && error !== 'CHALLENGE_EXPIRED') {
+      if (error) {
         throw new Error(error);
-      }
-      if (verifyError) {
-        throw new Error(verifyError);
       }
     }
   };
@@ -271,20 +267,18 @@ export function LoginPage() {
 
       // 4. Verify Signature with Backend
       const { error } = await AuthService.verifySignature(signature);
-      let verifyError;
+
       if (error === 'IS_REVOKED') {
-        const { verifyRes } = await performKeyPairFlow(kdUser);
-        verifyError = verifyRes.error;
+        await CryptoService.clearKeys();
+        throw new Error('Device Terminal ini telah di reset. Silahkan login kembali atau kontak Admin untuk pengaktifan Terminal');
       }
 
-      if (error === 'CHALLENGE_EXPIRED' || (verifyError && verifyError === 'CHALLENGE_EXPIRED')) {
+      if (error === 'CHALLENGE_EXPIRED') {
         AuthService.removeSession();
         setShowAccessTypeSelection(true);
         throw new Error('Sesi challenge kadaluarsa. Silahkan login kembali.');
-      } else if (error && error !== 'IS_REVOKED') {
+      } else if (error) {
         throw new Error(error);
-      } else if (verifyError) {
-        throw new Error(verifyError);
       }
 
       navigate('/terminal/outlet');
