@@ -172,6 +172,10 @@ export function LoginPage() {
         return;
       }
 
+      if(!storedKeys && data.access_type === 'TRM' && data.web_status === 'ACTIVE') {
+        throw new Error('User Terminal tidak terdaftar untuk Device ini.');
+      }
+
       navigate('/terminal/outlet');
     } catch (e) {
       setInvalid(true);
