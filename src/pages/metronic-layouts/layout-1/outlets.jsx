@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
-import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, MonitorSmartphone, Smartphone, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X } from 'lucide-react';
+import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, MonitorSmartphone, Smartphone, Monitor, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X } from 'lucide-react';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
@@ -34,7 +34,8 @@ function buildExpandedDetails(merchant, data) {
     return {
       ...terminal,
       userLabel: terminal?.kd_user || '-',
-      deviceLabel: matchedMerchantUser.device
+      deviceLabel: matchedMerchantUser.device,
+      webLabel: matchedMerchantUser.web_status,
     };
   });
 
@@ -285,25 +286,49 @@ function buildExpandedDetails(merchant, data) {
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
-                        <Smartphone className="mt-0.5 size-4 text-muted-foreground shrink-0" />
-                        <div className="min-w-0">
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                            Device
+                      <div className="flex flex-row gap-3">
+                        <div className="flex items-start w-full gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
+                          <Smartphone className="mt-0.5 size-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                              Device
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              <Badge
+                                variant={
+                                  terminal.deviceLabel === 'N/A'
+                                    ? 'secondary'
+                                    : 'success'
+                                }
+                                className="max-w-full"
+                              >
+                                <span className="truncate max-w-[220px]">
+                                  {terminal.deviceLabel}
+                                </span>
+                              </Badge>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            <Badge
-                              variant={
-                                terminal.deviceLabel === 'N/A'
-                                  ? 'secondary'
-                                  : 'success'
-                              }
-                              className="max-w-full"
-                            >
-                              <span className="truncate max-w-[220px]">
-                                {terminal.deviceLabel}
-                              </span>
-                            </Badge>
+                        </div>
+                        <div className="flex items-start w-full gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
+                          <Monitor className="mt-0.5 size-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                              Web
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              <Badge
+                                variant={
+                                  terminal.webLabel === 'INACTIVE'
+                                    ? 'secondary'
+                                    : 'success'
+                                }
+                                className="max-w-full"
+                              >
+                                <span className="truncate max-w-[220px]">
+                                  {terminal.webLabel}
+                                </span>
+                              </Badge>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1226,7 +1251,7 @@ export function OutletPage() {
         },
       },
     ],
-    [outlets, openModal, merchant]
+    [openModal, merchant]
   );
 
   const table = useReactTable({
