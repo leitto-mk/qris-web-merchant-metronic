@@ -1,3 +1,5 @@
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.jsx';
+import { Label } from '@/components/ui/label.jsx';
 import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import { useQueryClient } from '@tanstack/react-query';
@@ -809,8 +811,10 @@ const ModalContents = {
     );
   },
   ResetDeviceMerchantModalContent: ({ selected, closeModal }) => {
+    const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [resetDeviceXID, setResetDeviceXID] = useState('');
+    const [resetType, setResetType] = useState('MOB');
     const [showForm, setShowForm] = useState(false);
 
     const merchantUsersByKdUser = new Map(
@@ -846,7 +850,41 @@ const ModalContents = {
         await axiosInstance().post('/terminal/reset/device', {
           kdUser: session.kd_user,
           XID: resetDeviceXID,
+          type: resetType,
         });
+
+        // Update local data
+        if (selected?.merchantUser && selected?.terminal) {
+          const terminal = selected.terminal.find((t) => t.XID === resetDeviceXID);
+          if (terminal && terminal.kd_user) {
+            const userIndex = selected.merchantUser.findIndex(
+              (u) => u.kd_user === terminal.kd_user,
+            );
+
+            if (userIndex !== -1) {
+              const updatedMerchantUser = [...selected.merchantUser];
+              const user = { ...updatedMerchantUser[userIndex] };
+
+              if (resetType === 'MOB' || resetType === 'ALL') {
+                user.device = null;
+                user.status = 3;
+              }
+
+              if (resetType === 'WEB' || resetType === 'ALL') {
+                user.web_status = 'INACTIVE';
+              }
+
+              updatedMerchantUser[userIndex] = user;
+              selected.merchantUser = updatedMerchantUser;
+
+              // Invalidate queries to ensure UI is in sync if needed, 
+              // but since we modified 'selected' object which is likely a reference to the data in cache, 
+              // it might already be updated in some views. 
+              // However, React Query data should be updated via queryClient.setQueryData or invalidated.
+              queryClient.invalidateQueries('outlets');
+            }
+          }
+        }
 
         // Close modal after successful request
         closeModal();
@@ -858,7 +896,7 @@ const ModalContents = {
       } finally {
         setLoading(false);
       }
-    }, [resetDeviceXID, closeModal]);
+    }, [resetDeviceXID, closeModal, resetType, selected, queryClient]);
 
     return (
       <div className="flex flex-col gap-5">
@@ -915,27 +953,58 @@ const ModalContents = {
           </>
         ) : (
           <>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 w-1/2">
-                <Select
-                  value={resetDeviceXID || undefined}
-                  onValueChange={setResetDeviceXID}
-                  indicatorPosition="right"
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-2.5">
+                <Label>Terminal</Label>
+                <div className="flex items-center gap-2 w-1/2">
+                  <Select
+                    value={resetDeviceXID || undefined}
+                    onValueChange={setResetDeviceXID}
+                    indicatorPosition="right"
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih Terminal" />
+                    </SelectTrigger>
+                    <SelectContent className="w-full min-w-[16rem]">
+                      {terminalOptions.map((item) => (
+                        <SelectItem key={item.XID} value={item.XID}>
+                          {`[${item.TerminalID}] ${(item.kd_user || '').toUpperCase()} ${item.device ? ` • Device: ${item.device}` : ''} | Web: ${item.webStatus}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Label>Tipe Reset</Label>
+                <RadioGroup
+                  value={resetType}
+                  onValueChange={setResetType}
+                  className="flex flex-row gap-6"
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih Terminal" />
-                  </SelectTrigger>
-                  <SelectContent className="w-full min-w-[16rem]">
-                    {terminalOptions.map((item) => (
-                      <SelectItem key={item.XID} value={item.XID}>
-                        {`[${item.TerminalID}] ${(item.kd_user || '').toUpperCase()} ${item.device ? ` • Device: ${item.device}` : ''} | Web: ${item.webStatus}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="MOB" id="mob" />
+                    <Label htmlFor="mob" className="cursor-pointer">
+                      Mobile Device
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="WEB" id="web" />
+                    <Label htmlFor="web" className="cursor-pointer">
+                      Web Access
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="ALL" id="all" />
+                    <Label htmlFor="all" className="cursor-pointer">
+                      Keduanya
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
             </div>
-            <div className="flex flex-row justify-between">
+            <div className="flex flex-row justify-between mt-4">
               <DialogClose asChild>
                 <Button variant="outline">Tutup</Button>
               </DialogClose>
