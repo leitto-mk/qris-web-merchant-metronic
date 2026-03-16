@@ -992,7 +992,7 @@ function OutletPageSkeleton() {
         </CardHeader>
         <CardTable>
           <div className="divide-y">
-            <div className="flex items-center justify-between p-4 xl:p-5 text-sm font-medium text-muted-foreground">
+            <div className="flex items-center gap-5 justify-between p-4 xl:p-5 text-sm font-medium text-muted-foreground">
               <Skeleton className="h-5 w-1/6" />
               <Skeleton className="h-5 w-1/6" />
               <Skeleton className="h-5 w-1/6" />
@@ -1001,7 +1001,7 @@ function OutletPageSkeleton() {
               <Skeleton className="h-5 w-1/6" />
             </div>
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 xl:p-5">
+              <div key={i} className="flex items-center gap-5 justify-between p-4 xl:p-5">
                 <Skeleton className="h-8 w-1/6" />
                 <Skeleton className="h-8 w-1/6" />
                 <Skeleton className="h-8 w-1/6" />
