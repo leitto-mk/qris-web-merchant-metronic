@@ -157,22 +157,19 @@ export function LoginPage() {
     setInvalid(false);
     setLoading(true);
     try {
-      const data = await AuthService.login({ username: values.username.toUpperCase(), password: values.password });
+      const storedKeys = await CryptoService.getKeys();
+      const kdUser = storedKeys?.kdUser ?? values.username.toUpperCase();
+
+      const data = await AuthService.login({
+        username: values.username.toUpperCase(),
+        password: values.password,
+        terminal_origin: kdUser
+      });
 
       if(data.web_status === 'INACTIVE') {
         setUserData(data);
         setReset(true);
         return;
-      }
-
-      //Make sure it tries to log in on the same registered device
-      if(data.access_type === 'TRM') {
-        const storedKeys = await CryptoService.getKeys();
-        const kdUser = storedKeys?.kdUser;
-
-        if(!storedKeys || kdUser !== data.kd_user) {
-          throw new Error('User Terminal tidak terdaftar untuk Device ini.');
-        }
       }
 
       navigate('/terminal/outlet');
@@ -343,7 +340,7 @@ export function LoginPage() {
                   className="w-full transition-colors bg-blue-600 hover:bg-blue-500 text-white rounded-lg h-12 text-lg font-semibold"
                 >
                   <User className="size-5 mr-2" />
-                  Admin
+                  Login
                 </Button>
                 <Button
                   disabled={loading}
