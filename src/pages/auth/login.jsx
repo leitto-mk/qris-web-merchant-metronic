@@ -101,7 +101,10 @@ export function LoginPage() {
       let devOwner = keys?.kdUser;
       let privateKey = keys?.privateKey;
 
+      // 1. Generate the Keys
       if (!keys || should_regenerate) {
+        await CryptoService.clearKeys();
+
         const { verifyRes } = await performKeyPairFlow(kdUser);
         if (verifyRes.error === 'CHALLENGE_EXPIRED') {
           AuthService.removeSession();
@@ -112,7 +115,7 @@ export function LoginPage() {
         if (verifyRes.error) {
           throw new Error(verifyRes.error);
         }
-
+        
         return; // Success
       }
 
