@@ -83,7 +83,7 @@ export function LoginPage() {
 
       if(data.web_status === 'INACTIVE') {
         setUserData(data);
-        setReset(true);
+        // setReset(true); //Deactivate Reset Password on INACTIVE Web Device, to prevent re-input password
         return;
       }
 
