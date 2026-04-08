@@ -81,14 +81,21 @@ export function LoginPage() {
         terminal_origin: kdUser
       });
 
-      if(data.web_status === 'INACTIVE') {
+      if(data.status === 3) {
         setUserData(data);
-        // setReset(true); //Deactivate Reset Password on INACTIVE Web Device, to prevent re-input password
+        setReset(true);
         return;
       }
 
-      if(!storedKeys && data.access_type === 'TRM' && data.web_status === 'ACTIVE') {
+      const access_type = data.access_type;
+      const web_status = data.web_status;
+
+      if (access_type === 'TRM' && web_status === 'ACTIVE' && !storedKeys) {
         throw new Error('User Terminal tidak terdaftar untuk Device ini.');
+      }
+
+      if(access_type === 'TRM' && web_status === 'INACTIVE') {
+        await performTerminalRegistration(data.kd_user, data.access_type, true);
       }
 
       navigate('/terminal/outlet');
