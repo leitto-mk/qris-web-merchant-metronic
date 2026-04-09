@@ -431,7 +431,7 @@ export function LoginPage() {
                         className="text-white font-semibold"
                         disabled={loading}
                         variant="lg"
-                        type="password"
+                        type={onShow ? 'text' : 'password'}
                         placeholder="Password Baru"
                         {...form.register('new_password')}
                       />
@@ -448,7 +448,7 @@ export function LoginPage() {
                         className="text-white font-semibold"
                         disabled={loading}
                         variant="lg"
-                        type="password"
+                        type={onShow ? 'text' : 'password'}
                         placeholder="Konfirmasi Password"
                         {...form.register('confirm_new_password')}
                       />
