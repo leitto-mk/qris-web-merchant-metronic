@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import { LoaderCircleIcon, RotateCcw, X } from 'lucide-react';
 import moment from 'moment';
@@ -130,7 +130,8 @@ export function TerminalPage() {
 
     const JSONData = {
       domain: 'ID.CO.BANKSULUTGO.WWW',
-      outletName: outlet?.outlatName,
+      domain2: 'ID.CO.QRIS.WWW',
+      outletName: outlet?.namapendek,
       terminalID: outlet?.terminal?.[0]?.TerminalID,
       MID: outlet?.MID,
       NMID: outlet?.nmid,
@@ -143,13 +144,13 @@ export function TerminalPage() {
       postal: outlet?.kdPost,
       billing: QRData.billing,
       amount: QRData.set_amount,
-      withTip: '00',
+      withTip: '01',
       tipAmount: '0',
       tipPersen: '0',
     };
 
-    const qrValue = QRService.toTLV(JSONData);
-    const qrSrc = await QRCode.toDataURL(qrValue, {
+    const tlvData = QRService.toTLV(JSONData);
+    const qrSrc = await QRCode.toDataURL(tlvData, {
       errorCorrectionLevel: 'L',
       width: 800,
       margin: 1,
@@ -158,7 +159,7 @@ export function TerminalPage() {
     const newPayment = {
       currentTime: moment().format('YYYY-MM-DD HH:mm'),
       outlet: outlet?.outlatName,
-      qr: qrValue,
+      qr: tlvData,
       nmid: outlet?.nmid,
       expiresInMs: 180000,
       amount: amountNumber,
