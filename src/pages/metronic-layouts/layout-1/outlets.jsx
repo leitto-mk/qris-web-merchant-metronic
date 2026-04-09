@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
-import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, MonitorSmartphone, Smartphone, Monitor, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X, RotateCcw } from 'lucide-react';
+import { Check, EllipsisVertical, Eye, EyeClosed, Key, LoaderCircleIcon, MonitorSmartphone, Smartphone, Monitor, UserRoundIcon, UserRoundMinus, UserRoundPen, UserRoundPlusIcon, X, RotateCcw, UserPen } from 'lucide-react';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
@@ -276,16 +276,42 @@ function buildExpandedDetails(merchant, data, openModal) {
                     </div>
 
                     <div className="mt-4 space-y-3">
-                      <div className="flex items-start gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
-                        <UserRoundIcon className="mt-0.5 size-4 text-muted-foreground shrink-0" />
-                        <div className="min-w-0">
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                            Digunakan oleh
-                          </div>
-                          <div className="font-semibold uppercase break-words">
-                            {terminal.userLabel}
+                      <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-border/70 bg-background/70 px-3 py-2.5">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <UserRoundIcon className="mt-0.5 size-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                              Digunakan oleh
+                            </div>
+                            <div className="font-semibold uppercase break-words">
+                              {terminal.userLabel}
+                            </div>
                           </div>
                         </div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                mode="icon"
+                                className="size-6 hover:bg-red-500 hover:text-white text-muted-foreground bg-transparent border-none shadow-none transition-colors duration-200"
+                                onClick={() =>
+                                  openModal(
+                                    'ResetPasswordTerminalModalContent',
+                                    data,
+                                    {
+                                      merchantUser: terminal.kd_user,
+                                    },
+                                  )
+                                }
+                              >
+                                <UserPen className="size-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>Reset Password</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
 
                       <div className="flex flex-row gap-3">
@@ -314,7 +340,7 @@ function buildExpandedDetails(merchant, data, openModal) {
                                     <TooltipTrigger asChild>
                                       <Button
                                         mode="icon"
-                                        className="size-6 hover:bg-white hover:text-red-500  text-red-600 bg-red-50"
+                                        className="size-6 hover:bg-red-500 hover:text-white text-muted-foreground bg-transparent border-none shadow-none transition-colors duration-200"
                                         onClick={() =>
                                           openModal(
                                             'ResetDeviceMerchantModalContent',
@@ -363,7 +389,7 @@ function buildExpandedDetails(merchant, data, openModal) {
                                     <TooltipTrigger asChild>
                                       <Button
                                         mode="icon"
-                                        className="size-6 hover:bg-white hover:text-red-500  text-red-600 bg-red-50"
+                                        className="size-6 hover:bg-red-500 hover:text-white text-muted-foreground bg-transparent border-none shadow-none transition-colors duration-200"
                                         onClick={() =>
                                           openModal(
                                             'ResetDeviceMerchantModalContent',
@@ -782,9 +808,11 @@ const ModalContents = {
       </>
     );
   },
-  ResetPasswordTerminalModalContent: ({ selected, closeModal }) => {
+  ResetPasswordTerminalModalContent: ({ selected, closeModal, initialState }) => {
     const [loading, setLoading] = useState(false);
-    const [merchantUser, setMerchantUser] = useState('');
+    const [merchantUser, setMerchantUser] = useState(
+      initialState?.merchantUser ?? '',
+    );
 
     const merchantUserOptions = (selected?.merchantUser ?? []).filter(
       (item) => item?.kd_user,
@@ -822,6 +850,9 @@ const ModalContents = {
     return (
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
+          <p className="text-red-500 font-bold text-sm italic">
+            *Device dan Web menggunakan Password yang sama
+          </p>
           <div className="flex items-center gap-2 w-1/2">
             <Select
               value={merchantUser || undefined}
