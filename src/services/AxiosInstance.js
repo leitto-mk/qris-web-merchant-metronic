@@ -19,13 +19,20 @@ const axiosInstance = () => {
    * to match any single non-empty segment
    */
   const TOAST_PATTERNS = [
-        'merchant/reset/password',
-        'terminal/create',
-        'terminal/reset/device',
-        'terminal/reset/password',
-        'terminal/{id}/delete',
-        'history/{merchant}/trx'
-    ];
+      'user/logout',                  //Logout
+      '/user/register-web-key',       //Register Web Public Key
+      'user/reset',                   //One time Reset after Login
+      'user/confirm',                 //Password Confirmation on certain Actions
+      'merchant',                     //Get Merchant Data
+      'merchant/reset/password',      //Reset Admin Password
+      'outlets',                      //Get Outlets Data
+      'qr/create',                    //Generate QR Data
+      'terminal/create',              //Create Terminal
+      'terminal/reset/device',        //Reset Device Terminal
+      'terminal/reset/password',      //Reset Device/Web Password
+      'terminal/{id}/delete',         //Delete Terminal
+      'history/{merchant}/trx',       //Get Merchant Transaction History
+  ];
 
   /**
    * Compute API path prefix once
@@ -127,7 +134,6 @@ const axiosInstance = () => {
       }
       return config;
   });
-
 
   /**
    * Intercepts Response Code to force session be removed and redirected to /login

@@ -1,7 +1,9 @@
 import axios from 'axios';
-import { toast } from 'sonner';
 import moment from 'moment';
+import { toast } from 'sonner';
 import { API_URL, APP_ENV } from '@/config/runtime';
+import axiosInstance from '@/services/AxiosInstance';
+
 
 const API = API_URL + '/api/v1/mrchadmin';
 const ENV = APP_ENV;
@@ -20,16 +22,17 @@ const getApiHeaders = () => {
 };
 
 const AuthService = {
+  //Doesn't use AxiosInstance
   async login(formData) {
     try {
       const response = await axios.post(API + '/login', formData, {
-        withCredentials: ENV === 'production' // Required for cross-origin cookies
+        withCredentials: ENV === 'production', // Required for cross-origin cookies
       });
       const data = response.data.data;
 
       this.storeMerchantData(response, data);
 
-      if(data.access_type !== 'TRM')  {
+      if (data.access_type !== 'TRM') {
         toast.success('Selamat Datang, ' + data.kd_user);
       }
 
@@ -43,18 +46,10 @@ const AuthService = {
   async confirmReset(formData) {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
-      const response = await axios({
-        url: API + '/user/reset',
-        headers: getApiHeaders(),
-        responseType: 'json',
-        responseEncoding: 'utf-8',
-        withCredentials: ENV === 'production',
-        method: 'POST',
-        data: {
-          kdUser: data.kd_user,
-          new_password: formData.new_password,
-          confirm_new_password: formData.confirm_new_password
-        }
+      const response = await axiosInstance().post('/user/reset', {
+        kdUser: data.kd_user,
+        new_password: formData.new_password,
+        confirm_new_password: formData.confirm_new_password,
       });
       toast.success(response?.data?.message || 'Reset password Berhasil');
       return response.data;
@@ -67,16 +62,9 @@ const AuthService = {
   async registerPublicKey(publicKey) {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
-      const response = await axios({
-        url: API + '/user/register-web-key',
-        headers: getApiHeaders(),
-        responseType: 'json',
-        withCredentials: ENV === 'production',
-        method: 'POST',
-        data: {
-          kdUser: data.kd_user,
-          public_key: publicKey
-        }
+      const response = await axiosInstance().post('/user/register-web-key', {
+        kdUser: data.kd_user,
+        public_key: publicKey,
       });
       return response.data;
     } catch (error) {
@@ -85,6 +73,7 @@ const AuthService = {
     }
   },
 
+  //Doesn't use AxiosInstance
   async getChallenge() {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
@@ -105,6 +94,7 @@ const AuthService = {
     }
   },
 
+  //Doesn't use AxiosInstance
   async verifySignature(signature) {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
@@ -121,7 +111,6 @@ const AuthService = {
       });
 
       this.storeMerchantData(response, data);
-      
       toast.success('Verifikasi berhasil');
       return response.data;
     } catch (error) {
@@ -133,25 +122,13 @@ const AuthService = {
   async confirmPassword(password) {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
-      const response = await axios({
-        url: API + '/user/confirm',
-        headers: getApiHeaders(),
-        responseType: 'json',
-        responseEncoding: 'utf-8',
-        withCredentials: ENV === 'production',
-        validateStatus: (code) => code === 200,
-        method: 'POST',
-        data: {
-          kdUser: data.kd_user,
-          confirm: password
-        }
+      const response = await axiosInstance().post('/user/confirm', {
+        kdUser: data.kd_user,
+        confirm: password,
       });
       toast.success(response?.data?.message || 'Konfirmasi Password Berhasil');
       return response.data;
     } catch (error) {
-      if (error?.response?.status === 401 || error?.response?.status === 403) {
-        AuthService.removeSession();
-      }
       const errMsg = error?.response?.data?.error_msg || error?.message || "Something's Wrong";
       throw new Error(errMsg);
     }
@@ -160,17 +137,8 @@ const AuthService = {
   async logout() {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
-      await axios({
-        url: API + '/user/logout',
-        headers: getApiHeaders(),
-        responseType: 'json',
-        responseEncoding: 'utf-8',
-        withCredentials: ENV === 'production',
-        method: 'POST',
-        validateStatus: (code) => [200, 401, 403].includes(code),
-        data: {
-          kdUser: data.kd_user
-        }
+      await axiosInstance().post('/user/logout', {
+        kdUser: data.kd_user,
       });
     } finally {
       this.removeSession();
