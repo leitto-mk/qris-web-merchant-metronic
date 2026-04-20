@@ -147,10 +147,14 @@ const axiosInstance = () => {
     },
     async (error) => {
       const status = error?.response?.status;
-      // const msg = error?.response?.data?.message || error.response.data.errors || 'Terjadi kesalahan';
 
       if (status === 401 || status === 403) {
         AuthService.removeSession();
+
+        // Avoid infinite redirect loop if already on login page
+        if (window.location.pathname !== '/login') {
+          window.location.replace('/login');
+        }
       }
 
       const shouldToast = shouldToastForUrl(error?.config?.url);
