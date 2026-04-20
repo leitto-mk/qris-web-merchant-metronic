@@ -73,10 +73,10 @@ export function LoginPage() {
     setLoading(true);
     try {
       const storedKeys = await CryptoService.getKeys();
-      const kdUser = storedKeys?.kdUser ?? values.username.toUpperCase();
+      const kdUser = storedKeys?.kdUser ?? values.username;
 
       const data = await AuthService.login({
-        username: values.username.toUpperCase(),
+        username: values.username,
         password: values.password,
         terminal_origin: kdUser
       });
@@ -385,7 +385,7 @@ export function LoginPage() {
                     <InputWrapper className="h-11 border-xl">
                       <User />
                       <Input
-                        className="text-white font-semibold uppercase"
+                        className="text-white font-semibold"
                         disabled={loading}
                         type="text"
                         placeholder="USERNAME"
