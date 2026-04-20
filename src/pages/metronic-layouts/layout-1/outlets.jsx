@@ -489,7 +489,7 @@ const ModalContents = {
           outlet: selected.XID,
         })
         .then(() => {
-          queryClient.invalidateQueries('outlets');
+          queryClient.invalidateQueries(['outlets', session.kd_user]);
           closeModal();
         })
         .catch((error) => {
@@ -968,7 +968,12 @@ const ModalContents = {
               // but since we modified 'selected' object which is likely a reference to the data in cache, 
               // it might already be updated in some views. 
               // However, React Query data should be updated via queryClient.setQueryData or invalidated.
-              queryClient.invalidateQueries('outlets');
+              const session = AuthService.retrieveSession();
+              if (session && session.kd_user) {
+                queryClient.invalidateQueries(['outlets', session.kd_user]);
+              } else {
+                queryClient.invalidateQueries('outlets');
+              }
             }
           }
         }
