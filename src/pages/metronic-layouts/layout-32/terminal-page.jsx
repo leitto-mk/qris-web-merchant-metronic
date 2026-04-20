@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
-import { LoaderCircleIcon, RotateCcw, X } from 'lucide-react';
+import { LoaderCircleIcon, RotateCcw, X, Download } from 'lucide-react';
 import moment from 'moment';
 import QRCode from 'qrcode';
+import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
@@ -42,6 +43,26 @@ export function TerminalPage() {
   // Amount input state (formatted and numeric)
   const [amount, setAmount] = useState('');
   const [amountNumber, setAmountNumber] = useState(0);
+
+  // History states
+  const startOfToday = () => moment().startOf('day').toDate();
+  const [dateFrom, setDateFrom] = useState(() => startOfToday());
+  const [dateTo, setDateTo] = useState(() => moment().endOf('day').toDate());
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [errorHistory, setErrorHistory] = useState('');
+  const [history, setHistory] = useState([]);
+  const [filters, setFilters] = useState({
+    timestamprq: '',
+    amount: { operator: 'eq', value: '' },
+    issuer: '',
+    outlet: '',
+    terminal: '',
+    rrn: '',
+    fromname: '',
+    fromacc: '',
+    toacc: '',
+  });
+
   const session = AuthService.retrieveSession();
   const outlet = Array.isArray(outlets) ? outlets[0] : outlets;
 
@@ -232,6 +253,168 @@ export function TerminalPage() {
     setAmount('');
     setAmountNumber(0);
   };
+
+  const formatIDR = useCallback(
+    (n) =>
+      new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+      }).format(Number(n || 0)),
+    []
+  );
+
+  const maskAcc = (acc) => (acc ? String(acc).replace(/(\d{4})\d+(\d{4})/, '$1••••$2') : '-');
+
+  const uniqueIssuers = useMemo(() => {
+    if (!history.length) return [];
+    const issuers = new Set(history.map(item => item.issuer).filter(Boolean));
+    return ['All', ...Array.from(issuers)];
+  }, [history]);
+
+  const uniqueOutlets = useMemo(() => {
+    if (!history.length) return [];
+    const outlets = new Set(history.map(item => item.outlet).filter(Boolean));
+    return ['All', ...Array.from(outlets)];
+  }, [history]);
+
+  const uniqueTerminals = useMemo(() => {
+    if (!history.length) return [];
+    const terminals = new Set(history.map(item => item.terminal).filter(Boolean));
+    return ['All', ...Array.from(terminals)];
+  }, [history]);
+
+  const filteredHistory = useMemo(() => {
+    if (!history.length) return [];
+    return history
+      .slice()
+      .sort((a, b) => new Date(b.timestamprq) - new Date(a.timestamprq))
+      .filter((item) => {
+        if (filters.timestamprq && !new Date(item.timestamprq).toLocaleString('id-ID').toLowerCase().includes(filters.timestamprq.toLowerCase())) {
+          return false;
+        }
+        const amountValue = parseFloat(filters.amount.value);
+        if (!isNaN(amountValue)) {
+          const itemAmount = Number(item.amount);
+          if (filters.amount.operator === 'gte' && itemAmount < amountValue) return false;
+          if (filters.amount.operator === 'lte' && itemAmount > amountValue) return false;
+          if (filters.amount.operator === 'gt' && itemAmount <= amountValue) return false;
+          if (filters.amount.operator === 'lt' && itemAmount >= amountValue) return false;
+          if (filters.amount.operator === 'eq' && itemAmount !== amountValue) return false;
+        }
+        if (filters.issuer && filters.issuer !== 'All' && item.issuer !== filters.issuer) return false;
+        if (filters.outlet && filters.outlet !== 'All' && item.outlet !== filters.outlet) return false;
+        if (filters.terminal && filters.terminal !== 'All' && item.terminal !== filters.terminal) return false;
+        if (filters.rrn && !String(item.rrn || '').toLowerCase().includes(filters.rrn.toLowerCase())) return false;
+        if (filters.fromname && !String(item.fromname || '').toLowerCase().includes(filters.fromname.toLowerCase())) return false;
+        if (filters.fromacc && !String(item.fromacc || '').toLowerCase().includes(filters.fromacc.toLowerCase())) return false;
+        if (filters.toacc && !String(item.toacc || '').toLowerCase().includes(filters.toacc.toLowerCase())) return false;
+        return true;
+      });
+  }, [history, filters]);
+
+  const isFiltered = useMemo(() => {
+    return Object.values(filters).some(val => {
+      if (typeof val === 'string') return val.length > 0 && val !== 'All';
+      if (typeof val === 'object' && val !== null) return val.value.length > 0;
+      return false;
+    });
+  }, [filters]);
+
+  const filteredTotals = useMemo(() => {
+    const totalAmount = filteredHistory.reduce((prev, cur) => prev + Number(cur.amount || 0), 0);
+    const count = filteredHistory.length;
+    return { totalAmount, count };
+  }, [filteredHistory]);
+
+  const handleFilterChange = (columnId, value) => {
+    setFilters((prev) => ({ ...prev, [columnId]: value }));
+  };
+
+  const handleAmountFilterChange = (key, value) => {
+    if (key === 'value') {
+      const numericValue = value.replace(/[^0-9]/g, '');
+      setFilters(prev => ({
+        ...prev,
+        amount: { ...prev.amount, [key]: numericValue }
+      }));
+    } else {
+      setFilters(prev => ({
+        ...prev,
+        amount: { ...prev.amount, [key]: value }
+      }));
+    }
+  };
+
+  const handleTransactionHistory = useCallback(async () => {
+    try {
+      setErrorHistory('');
+      setLoadingHistory(true);
+      const sess = AuthService.retrieveSession();
+      if (!sess?.kd_user) throw new Error('Sesi kadaluarsa.');
+      const merchantId = merchant?.XID;
+      if (!merchantId) throw new Error('Merchant tidak tersedia.');
+
+      const payload = {
+        kdUser: sess.kd_user,
+        date_from: moment(dateFrom).format('YYYY-MM-DD'),
+        date_to: moment(dateTo).format('YYYY-MM-DD'),
+        terminal: outlet?.terminal?.[0]?.TerminalID ?? null
+      };
+
+      if (window.APP_ENV === 'development') {
+        const mock = generateTransactionHistory({ count: 50, from: dateFrom, to: dateTo, merchant });
+        setHistory(mock);
+        return;
+      }
+
+      const { data } = await axiosInstance().post(`/history/${merchantId}/trx`, payload);
+      const transactionsArray = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      const mapped = transactionsArray.map((tx) => ({
+        ...tx,
+        issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
+      }));
+      setHistory(mapped);
+    } catch (e) {
+      console.error(e);
+      setErrorHistory('Gagal mengambil data.');
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [merchant, dateFrom, dateTo]);
+
+  const exportToCsv = () => {
+    if (filteredHistory.length === 0) return;
+    const headers = ['Tanggal', 'Amount', 'Issuer', 'Outlet', 'Terminal', 'RRN', 'From Name', 'From Acc', 'To Acc'];
+    const rows = filteredHistory.map(item => [
+      `"${new Date(item.timestamprq).toLocaleString('id-ID')}"`,
+      item.amount,
+      `"${item.issuer || ''}"`,
+      `"${item.outlet || ''}"`,
+      `"${item.terminal || ''}"`,
+      `"${item.rrn || ''}"`,
+      `"${item.fromname || ''}"`,
+      `"${item.fromacc || ''}"`,
+      `"${item.toacc || ''}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `terminal_transaction_history.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  useEffect(() => {
+    if (merchant && !appLoading) {
+      handleTransactionHistory();
+    }
+  }, [merchant, appLoading, handleTransactionHistory]);
 
   useEffect(() => {
     return () => {
@@ -497,8 +680,8 @@ export function TerminalPage() {
 
           {tab === 'transaksi' && (
             // Expand container width for large screens so the Transaksi tab doesn't look cramped on >1080p
-            <div className="container max-w-[1600px] 2xl:max-w-[1800px]">
-              <div className="flex flex-wrap justify-center gap-5 mt-5">
+            <div className="container max-w-[1600px] 2xl:max-w-[1800px] mb-10">
+              <div className="flex flex-wrap lg:flex-nowrap justify-center gap-5 mt-5">
                 {/* NOMINAL SUBMIT or QR PAYMENT DISPLAY */}
                 <div className="card flex flex-col gap-4">
                   {!payment?.display ? (
@@ -690,6 +873,128 @@ export function TerminalPage() {
                       </div>
                     </>
                   )}
+                </div>
+
+                {/* TRANSACTION TABLE */}
+                <div className="flex-1 min-w-0">
+                  <Card>
+                    <CardHeader className="py-3.5 flex flex-row items-center justify-between">
+                      <CardHeading>
+                        <div className="font-bold uppercase">Daftar Transaksi Hari Ini</div>
+                      </CardHeading>
+                      <div className="flex gap-2">
+                         <Button variant="outline" size="sm" onClick={handleTransactionHistory} disabled={loadingHistory}>
+                           {loadingHistory ? 'Loading...' : 'Refresh'}
+                         </Button>
+                        <Button className={'bg-orange-400 hover:bg-orange-600 text-white'} onClick={exportToCsv} variant="outline" size="sm" disabled={loadingHistory || filteredHistory.length === 0}>
+                          <Download className="size-3.5" />
+                          <span>Export CSV</span>
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto">
+                      {errorHistory && <div className="text-red-500 mb-2">{errorHistory}</div>}
+                      {history.length === 0 && !loadingHistory ? (
+                        <div className="text-sm text-muted-foreground py-10 text-center">Belum ada data transaksi hari ini.</div>
+                      ) : (
+                        <table className="min-w-full text-sm">
+                          <thead>
+                          <tr className="text-left border-b border-dashed">
+                            <th className="py-2 pr-4">Tanggal</th>
+                            <th className="py-2 pr-4 text-right">Amount</th>
+                            <th className="py-2 pr-4">Issuer</th>
+                            <th className="py-2 pr-4">Outlet</th>
+                            <th className="py-2 pr-4">Terminal</th>
+                            <th className="py-2 pr-4">RRN</th>
+                            <th className="py-2 pr-4">From Name</th>
+                            <th className="py-2 pr-4">From Acc</th>
+                            <th className="py-2 pr-4">To Acc</th>
+                          </tr>
+                          <tr className="text-left">
+                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.timestamprq} onChange={(e) => handleFilterChange('timestamprq', e.target.value)} /></td>
+                            <td className="py-2 pr-4">
+                              <div className="flex items-center gap-1">
+                                <select
+                                  className="h-8 border border-input bg-background rounded-md px-2 text-xs"
+                                  value={filters.amount.operator}
+                                  onChange={(e) => handleAmountFilterChange('operator', e.target.value)}
+                                >
+                                  <option value="eq">=</option>
+                                  <option value="gte">≥</option>
+                                  <option value="lte">≤</option>
+                                  <option value="gt">&gt;</option>
+                                  <option value="lt">&lt;</option>
+                                </select>
+                                <Input
+                                  type="text"
+                                  placeholder="Value..."
+                                  className="h-8"
+                                  value={formatIDR(filters.amount.value).replace('IDR', '').trim()}
+                                  onChange={(e) => handleAmountFilterChange('value', e.target.value)}
+                                />
+                              </div>
+                            </td>
+                            <td className="py-2 pr-4">
+                              <select
+                                className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                                value={filters.issuer}
+                                onChange={(e) => handleFilterChange('issuer', e.target.value)}
+                              >
+                                {uniqueIssuers.map(val => <option key={val} value={val}>{val}</option>)}
+                              </select>
+                            </td>
+                            <td className="py-2 pr-4">
+                              <select
+                                className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                                value={filters.outlet}
+                                onChange={(e) => handleFilterChange('outlet', e.target.value)}
+                              >
+                                {uniqueOutlets.map(out => <option key={out} value={out}>{out}</option>)}
+                              </select>
+                            </td>
+                            <td className="py-2 pr-4">
+                              <select
+                                className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                                value={filters.terminal}
+                                onChange={(e) => handleFilterChange('terminal', e.target.value)}
+                              >
+                                {uniqueTerminals.map(t => <option key={t} value={t}>{t}</option>)}
+                              </select>
+                            </td>
+                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.rrn} onChange={(e) => handleFilterChange('rrn', e.target.value)} /></td>
+                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromname} onChange={(e) => handleFilterChange('fromname', e.target.value)} /></td>
+                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromacc} onChange={(e) => handleFilterChange('fromacc', e.target.value)} /></td>
+                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.toacc} onChange={(e) => handleFilterChange('toacc', e.target.value)} /></td>
+                          </tr>
+                          </thead>
+                          <tbody>
+                          {filteredHistory.map((row, idx) => (
+                            <tr key={idx} className="border-b border-dashed last:border-0">
+                              <td className="py-2 pr-4 whitespace-nowrap">{new Date(row.timestamprq).toLocaleString('id-ID')}</td>
+                              <td className="py-2 pr-4 text-right font-mono">{formatIDR(row.amount)}</td>
+                              <td className="py-2 pr-4">{row.issuer.toUpperCase()}</td>
+                              <td className="py-2 pr-4">{row.outlet}</td>
+                              <td className="py-2 pr-4">{row.terminal}</td>
+                              <td className="py-2 pr-4 font-mono">{row.rrn}</td>
+                              <td className="py-2 pr-4">{row.fromname.toUpperCase() ?? 'N/A'}</td>
+                              <td className="py-2 pr-4 font-mono">{maskAcc(row.fromacc)}</td>
+                              <td className="py-2 pr-4 font-mono">{maskAcc(row.toacc)}</td>
+                            </tr>
+                          ))}
+                          </tbody>
+                          {isFiltered && (
+                            <tfoot>
+                            <tr className="border-t border-dashed">
+                              <td className="py-2 pr-4 font-bold">Total Filtered</td>
+                              <td className="py-2 pr-4 text-right font-mono font-bold">{formatIDR(filteredTotals.totalAmount)}</td>
+                              <td colSpan="7" className="py-2 pr-4 text-right font-bold">{filteredTotals.count} records</td>
+                            </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>
