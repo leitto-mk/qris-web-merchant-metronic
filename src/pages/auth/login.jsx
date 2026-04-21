@@ -50,8 +50,13 @@ export function LoginPage() {
 
   const resetSchema = z
     .object({
-      new_password: z.string().min(6, 'Password must be at least 6 characters'),
-      confirm_new_password: z.string().min(6, 'Password confirmation required'),
+      new_password: z
+        .string()
+        .min(8, 'Password must be at least 8 characters')
+        .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+        .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+        .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character'),
+      confirm_new_password: z.string().min(8, 'Password confirmation required'),
     })
     .refine((data) => data.new_password === data.confirm_new_password, {
       message: 'Passwords do not match',
@@ -442,6 +447,11 @@ export function LoginPage() {
                         {onShow ? <EyeClosed /> : <Eye />}
                       </div>
                     </InputWrapper>
+                    {form.formState.errors.new_password && (
+                      <span className="text-red-500 text-xs">
+                        {form.formState.errors.new_password.message}
+                      </span>
+                    )}
                     <InputWrapper className="h-11 border-xl">
                       <Key />
                       <Input
@@ -459,6 +469,11 @@ export function LoginPage() {
                         {onShow ? <EyeClosed /> : <Eye />}
                       </div>
                     </InputWrapper>
+                    {form.formState.errors.confirm_new_password && (
+                      <span className="text-red-500 text-xs">
+                        {form.formState.errors.confirm_new_password.message}
+                      </span>
+                    )}
                     <Button
                       disabled={loading}
                       type="submit"
