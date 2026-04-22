@@ -71,6 +71,7 @@ export function LoginPage() {
       new_password: '',
       confirm_new_password: '',
     },
+    mode: 'onChange',
   });
 
   const handleLogin = async (values) => {
@@ -475,7 +476,7 @@ export function LoginPage() {
                       </span>
                     )}
                     <Button
-                      disabled={loading}
+                      disabled={loading || !form.formState.isValid}
                       type="submit"
                       severity="info"
                       className="w-full transition-colors bg-lime-600 hover:bg-lime-500 text-white rounded-lg mt-2"
