@@ -52,14 +52,14 @@ export function LoginPage() {
     .object({
       new_password: z
         .string()
-        .min(8, 'Password must be at least 8 characters')
-        .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-        .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-        .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character'),
-      confirm_new_password: z.string().min(8, 'Password confirmation required'),
+        .min(8, 'Password minimal diisi 8 karakter')
+        .regex(/[A-Z]/, 'Password harus mengandung 1 huruf besar')
+        .regex(/[a-z]/, 'Password harus mengandung 1 huruf kecil')
+        .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password harus mengandung 1 karakter spesial'),
+      confirm_new_password: z.string().min(8, 'Konfirmasi password harus diisi'),
     })
     .refine((data) => data.new_password === data.confirm_new_password, {
-      message: 'Passwords do not match',
+      message: 'Password tidak cocok',
       path: ['confirm_new_password'], // error shown in this field
     });
 
