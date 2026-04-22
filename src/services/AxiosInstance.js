@@ -19,13 +19,9 @@ const axiosInstance = () => {
    * to match any single non-empty segment
    */
   const TOAST_PATTERNS = [
-      'user/logout',                  //Logout
-      '/user/register-web-key',       //Register Web Public Key
       'user/reset',                   //One time Reset after Login
       'user/confirm',                 //Password Confirmation on certain Actions
-      'merchant',                     //Get Merchant Data
       'merchant/reset/password',      //Reset Admin Password
-      'outlets',                      //Get Outlets Data
       'qr/create',                    //Generate QR Data
       'terminal/create',              //Create Terminal
       'terminal/reset/device',        //Reset Device Terminal
