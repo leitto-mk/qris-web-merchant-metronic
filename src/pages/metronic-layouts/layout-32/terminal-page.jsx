@@ -903,8 +903,6 @@ export function TerminalPage() {
                             <th className="py-2 pr-4">Tanggal</th>
                             <th className="py-2 pr-4 text-right">Amount</th>
                             <th className="py-2 pr-4">Issuer</th>
-                            <th className="py-2 pr-4">Outlet</th>
-                            <th className="py-2 pr-4">Terminal</th>
                             <th className="py-2 pr-4">RRN</th>
                             <th className="py-2 pr-4">From Name</th>
                             <th className="py-2 pr-4">From Acc</th>
@@ -943,24 +941,6 @@ export function TerminalPage() {
                                 {uniqueIssuers.map(val => <option key={val} value={val}>{val}</option>)}
                               </select>
                             </td>
-                            <td className="py-2 pr-4">
-                              <select
-                                className="h-8 border border-input bg-background rounded-md px-2 w-full"
-                                value={filters.outlet}
-                                onChange={(e) => handleFilterChange('outlet', e.target.value)}
-                              >
-                                {uniqueOutlets.map(out => <option key={out} value={out}>{out}</option>)}
-                              </select>
-                            </td>
-                            <td className="py-2 pr-4">
-                              <select
-                                className="h-8 border border-input bg-background rounded-md px-2 w-full"
-                                value={filters.terminal}
-                                onChange={(e) => handleFilterChange('terminal', e.target.value)}
-                              >
-                                {uniqueTerminals.map(t => <option key={t} value={t}>{t}</option>)}
-                              </select>
-                            </td>
                             <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.rrn} onChange={(e) => handleFilterChange('rrn', e.target.value)} /></td>
                             <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromname} onChange={(e) => handleFilterChange('fromname', e.target.value)} /></td>
                             <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromacc} onChange={(e) => handleFilterChange('fromacc', e.target.value)} /></td>
@@ -973,8 +953,6 @@ export function TerminalPage() {
                               <td className="py-2 pr-4 whitespace-nowrap">{new Date(row.timestamprq).toLocaleString('id-ID')}</td>
                               <td className="py-2 pr-4 text-right font-mono">{formatIDR(row.amount)}</td>
                               <td className="py-2 pr-4">{row.issuer.toUpperCase()}</td>
-                              <td className="py-2 pr-4">{row.outlet}</td>
-                              <td className="py-2 pr-4">{row.terminal}</td>
                               <td className="py-2 pr-4 font-mono">{row.rrn}</td>
                               <td className="py-2 pr-4">{row.fromname.toUpperCase() ?? 'N/A'}</td>
                               <td className="py-2 pr-4 font-mono">{maskAcc(row.fromacc)}</td>
