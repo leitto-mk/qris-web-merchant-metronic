@@ -32,7 +32,9 @@ const AuthService = {
 
       this.storeMerchantData(response, data);
 
-      if (data.access_type !== 'TRM') {
+      if (data.status === 3) localStorage.removeItem('qris-web-merchant-data');
+
+      if (data.access_type !== 'TRM' && data.status === 1) {
         toast.success('Selamat Datang, ' + data.kd_user);
       }
 
@@ -43,18 +45,17 @@ const AuthService = {
     }
   },
 
-  async confirmReset(formData) {
+  async confirmReset(kdUser, formData) {
     try {
-      const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
       const response = await axiosInstance().post('/user/reset', {
-        kdUser: data.kd_user,
+        kdUser: kdUser,
         new_password: formData.new_password,
-        confirm_new_password: formData.confirm_new_password,
+        confirm_new_password: formData.confirm_new_password
       });
       toast.success(response?.data?.message || 'Reset password Berhasil');
       return response.data;
     } catch (error) {
-      const msg = error.response?.data?.error_msg || "Something's Wrong";
+      const msg = error.response?.data?.error_msg || "Reset Password Gagal";
       throw new Error(msg);
     }
   },

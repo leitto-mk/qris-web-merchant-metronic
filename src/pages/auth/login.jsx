@@ -104,7 +104,7 @@ export function LoginPage() {
         await performTerminalRegistration(data.kd_user, data.access_type, true);
       }
 
-      navigate('/terminal/outlet');
+      navigate('/');
     } catch (e) {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Login failed');
@@ -120,13 +120,13 @@ export function LoginPage() {
     setInvalid(false);
     setLoading(true);
     try {
-      await AuthService.confirmReset({
+      const kdUser = userData?.kd_user;
+      const access_type = userData?.access_type;
+
+      await AuthService.confirmReset(kdUser, {
         new_password: values.new_password,
         confirm_new_password: values.confirm_new_password,
       });
-
-      const kdUser = userData?.kd_user;
-      const access_type = userData?.access_type;
 
       if(access_type === 'TRM') {
         await performTerminalRegistration(kdUser, access_type, true);
@@ -148,7 +148,6 @@ export function LoginPage() {
       setInvalid(true);
       setInvalidMessage(e?.message || 'Browser tidak terdaftar pada User ini, pastikan Browser sesuai atau silahkan melakukan request Reset Device');
       setShowAccessTypeSelection(false);
-      AuthService.removeSession();
     } finally {
       setLoading(false);
       setIsVerifying(false);
