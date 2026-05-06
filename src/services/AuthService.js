@@ -65,11 +65,11 @@ const AuthService = {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
       const response = await axiosInstance().post('/user/register-web-key', {
         kdUser: data.kd_user,
-        public_key: publicKey,
+        public_key: publicKey
       });
       return response.data;
     } catch (error) {
-      const msg = error.response?.data?.error_msg || 'Gagal mendaftarkan kunci publik';
+      const msg = error.response?.data?.error_msg || 'Gagal melakukan Verifikasi Terminal';
       throw new Error(msg);
     }
   },
@@ -90,7 +90,7 @@ const AuthService = {
       });
       return response.data; // Expecting { challenge: "..." }
     } catch (error) {
-      const msg = error.response?.data?.error_msg || 'Gagal mendapatkan challenge';
+      const msg = error.response?.data?.error_msg || 'Gagal mendapatkan Verifikasi Terminal';
       throw new Error(msg);
     }
   },
@@ -115,7 +115,7 @@ const AuthService = {
       toast.success('Verifikasi berhasil');
       return response.data;
     } catch (error) {
-      const errorMsg = error.response?.data?.error_msg || 'Verifikasi Gagal';
+      const errorMsg = error.response?.data?.error_msg || 'Verifikasi Terminal Tidak Sesuai';
       throw new Error(errorMsg);
     }
   },
@@ -125,12 +125,12 @@ const AuthService = {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
       const response = await axiosInstance().post('/user/confirm', {
         kdUser: data.kd_user,
-        confirm: password,
+        confirm: password
       });
       toast.success(response?.data?.message || 'Konfirmasi Password Berhasil');
       return response.data;
     } catch (error) {
-      const errMsg = error?.response?.data?.error_msg || error?.message || "Something's Wrong";
+      const errMsg = error?.response?.data?.error_msg || error?.message || "Konfirmasi Password Gagal";
       throw new Error(errMsg);
     }
   },
@@ -139,7 +139,7 @@ const AuthService = {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
       await axiosInstance().post('/user/logout', {
-        kdUser: data.kd_user,
+        kdUser: data.kd_user
       });
     } finally {
       this.removeSession();
