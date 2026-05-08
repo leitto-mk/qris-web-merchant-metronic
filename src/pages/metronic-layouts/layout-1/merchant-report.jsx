@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
-import { Download } from 'lucide-react';
+import { CheckCircle2, Download, Printer } from 'lucide-react';
 import moment from 'moment';
+import { useTheme } from 'next-themes';
 import * as Recharts from 'recharts';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
@@ -10,7 +11,9 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart.jsx';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.jsx';
 import { Input } from '@/components/ui/input.jsx';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.jsx';
 
 
 /**
@@ -20,6 +23,7 @@ import { Input } from '@/components/ui/input.jsx';
  * @constructor
  */
 export function MerchantReportPage() {
+  const { theme } = useTheme();
   const { merchant } = useAppData();
 
   // Local UI state
@@ -42,6 +46,15 @@ export function MerchantReportPage() {
     fromacc: '',
     toacc: '',
   });
+
+  // Receipt Modal State
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [selectedTx, setSelectedTx] = useState(null);
+
+  const handlePrintReceipt = (tx) => {
+    setSelectedTx(tx);
+    setReceiptModalOpen(true);
+  };
 
   // Helpers
   const formatDateLocal = (d) => {
@@ -404,12 +417,16 @@ if (key === '30d')
             <div className="flex items-center gap-3">
               <div className="rounded-md border px-3 py-2">
                 <div className="text-xs text-muted-foreground">Dari</div>
-                <div className="font-mono text-sm">{formatDateTimeInput(dateFrom)}</div>
+                <div className="font-mono text-sm">
+                  {formatDateTimeInput(dateFrom)}
+                </div>
               </div>
               <span className="text-muted-foreground">→</span>
               <div className="rounded-md border px-3 py-2">
                 <div className="text-xs text-muted-foreground">Sampai</div>
-                <div className="font-mono text-sm">{formatDateTimeInput(dateTo)}</div>
+                <div className="font-mono text-sm">
+                  {formatDateTimeInput(dateTo)}
+                </div>
               </div>
             </div>
 
@@ -466,7 +483,9 @@ if (key === '30d')
                     lang="en-GB"
                     className="w-auto"
                     value={formatDateLocal(dateFrom)}
-                    onChange={(e) => handleCustomDateChange('from', e.target.value)}
+                    onChange={(e) =>
+                      handleCustomDateChange('from', e.target.value)
+                    }
                     disabled={loadingHistory}
                   />
                   <Input
@@ -474,7 +493,9 @@ if (key === '30d')
                     lang="en-GB"
                     className="w-auto"
                     value={formatDateLocal(dateTo)}
-                    onChange={(e) => handleCustomDateChange('to', e.target.value)}
+                    onChange={(e) =>
+                      handleCustomDateChange('to', e.target.value)
+                    }
                     disabled={loadingHistory}
                   />
                 </>
@@ -482,19 +503,24 @@ if (key === '30d')
             </div>
 
             <div className="flex-1" />
-            <Button onClick={handleTransactionHistory} disabled={loadingHistory}>
+            <Button
+              onClick={handleTransactionHistory}
+              disabled={loadingHistory}
+            >
               {loadingHistory ? 'Mengambil...' : 'Ambil Report'}
             </Button>
             {isMockEnabled() && (
-              <Button variant="dashed" onClick={handleTransactionHistoryMock} disabled={loadingHistory}>
+              <Button
+                variant="dashed"
+                onClick={handleTransactionHistoryMock}
+                disabled={loadingHistory}
+              >
                 Gunakan Dummy (50)
               </Button>
             )}
           </div>
 
-          {error ? (
-            <div className="text-red-500 text-sm">{error}</div>
-          ) : null}
+          {error ? <div className="text-red-500 text-sm">{error}</div> : null}
         </CardContent>
       </Card>
       {/* KPI Summary */}
@@ -503,19 +529,25 @@ if (key === '30d')
           <CardHeader className="py-3.5">
             <CardTitle>Total Transaksi</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{totals.count}</CardContent>
+          <CardContent className="text-2xl font-bold">
+            {totals.count}
+          </CardContent>
         </Card>
         <Card variant="accent">
           <CardHeader className="py-3.5">
             <CardTitle>Total Amount</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{formatIDR(totals.totalAmount)}</CardContent>
+          <CardContent className="text-2xl font-bold">
+            {formatIDR(totals.totalAmount)}
+          </CardContent>
         </Card>
         <Card variant="accent">
           <CardHeader className="py-3.5">
             <CardTitle>Rata-rata</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{formatIDR(totals.avg)}</CardContent>
+          <CardContent className="text-2xl font-bold">
+            {formatIDR(totals.avg)}
+          </CardContent>
         </Card>
       </div>
 
@@ -527,7 +559,9 @@ if (key === '30d')
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {issuerChips.map(([name, cnt]) => (
-              <Badge key={name} variant="secondary">{name}: {cnt}</Badge>
+              <Badge key={name} variant="secondary">
+                {name}: {cnt}
+              </Badge>
             ))}
           </CardContent>
         </Card>
@@ -545,16 +579,32 @@ if (key === '30d')
               className="w-full h-56 md:h-64 xl:h-72"
             >
               <Recharts.ResponsiveContainer width="100%" height="100%">
-                <Recharts.AreaChart data={chartData} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
+                <Recharts.AreaChart
+                  data={chartData}
+                  margin={{ left: 12, right: 12, top: 8, bottom: 8 }}
+                >
                   <Recharts.CartesianGrid strokeDasharray="3 3" />
-                  <Recharts.XAxis dataKey="date" tickLine={false} axisLine={false} />
+                  <Recharts.XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                  />
                   <Recharts.YAxis
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => new Intl.NumberFormat('id-ID').format(Number(value || 0))}
+                    tickFormatter={(value) =>
+                      new Intl.NumberFormat('id-ID').format(Number(value || 0))
+                    }
                   />
-                  <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
-                  <Recharts.Area type="monotone" dataKey="amount" stroke="#22c55e" fill="#22c55e33" />
+                  <ChartTooltip
+                    content={<ChartTooltipContent indicator="dot" />}
+                  />
+                  <Recharts.Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#22c55e"
+                    fill="#22c55e33"
+                  />
                   <ChartLegend content={<ChartLegendContent />} />
                 </Recharts.AreaChart>
               </Recharts.ResponsiveContainer>
@@ -567,118 +617,422 @@ if (key === '30d')
       <Card>
         <CardHeader className="py-3.5 flex flex-row items-center justify-between">
           <CardTitle>Daftar Transaksi</CardTitle>
-          <Button className={'bg-orange-400 hover:bg-orange-600 text-white'} onClick={exportToCsv} variant="outline" size="sm" disabled={loadingHistory || filteredHistory.length === 0}>
+          <Button
+            className={'bg-orange-400 hover:bg-orange-600 text-white'}
+            onClick={exportToCsv}
+            variant="outline"
+            size="sm"
+            disabled={loadingHistory || filteredHistory.length === 0}
+          >
             <Download className="size-3.5" />
             <span>Export CSV</span>
           </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {history.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Belum ada data. Silakan pilih preset rentang tanggal lalu klik Ambil Report.</div>
+            <div className="text-sm text-muted-foreground">
+              Belum ada data. Silakan pilih preset rentang tanggal lalu klik
+              Ambil Report.
+            </div>
           ) : (
             <>
               <table className="min-w-full text-sm">
                 <thead>
-                <tr className="text-left border-b border-dashed">
-                  <th className="py-2 pr-4">Tanggal</th>
-                  <th className="py-2 pr-4 text-right">Amount</th>
-                  <th className="py-2 pr-4">Issuer</th>
-                  <th className="py-2 pr-4">Outlet</th>
-                  <th className="py-2 pr-4">Terminal</th>
-                  <th className="py-2 pr-4">RRN</th>
-                  <th className="py-2 pr-4">From Name</th>
-                  <th className="py-2 pr-4">From Acc</th>
-                  <th className="py-2 pr-4">To Acc</th>
-                </tr>
-                <tr className="text-left">
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.timestamprq} onChange={(e) => handleFilterChange('timestamprq', e.target.value)} /></td>
-                  <td className="py-2 pr-4">
-                    <div className="flex items-center gap-1">
-                      <select
-                        className="h-8 border border-input bg-background rounded-md px-2 text-xs"
-                        value={filters.amount.operator}
-                        onChange={(e) => handleAmountFilterChange('operator', e.target.value)}
-                      >
-                        <option value="eq">=</option>
-                        <option value="gte">≥</option>
-                        <option value="lte">≤</option>
-                        <option value="gt">&gt;</option>
-                        <option value="lt">&lt;</option>
-                      </select>
+                  <tr className="text-left border-b border-dashed">
+                    <th className="py-2 pr-4 text-center">Action</th>
+                    <th className="py-2 pr-4">Tanggal</th>
+                    <th className="py-2 pr-4 text-right">Amount</th>
+                    <th className="py-2 pr-4">Issuer</th>
+                    <th className="py-2 pr-4">Outlet</th>
+                    <th className="py-2 pr-4">Terminal</th>
+                    <th className="py-2 pr-4">RRN</th>
+                    <th className="py-2 pr-4">From Name</th>
+                    <th className="py-2 pr-4">From Acc</th>
+                    <th className="py-2 pr-4">To Acc</th>
+                  </tr>
+                  <tr className="text-left">
+                    <td className="py-2 pr-4"></td>
+                    <td className="py-2 pr-4">
                       <Input
-                        type="text"
-                        placeholder="Value..."
+                        placeholder="Filter..."
                         className="h-8"
-                        value={formatIDR(filters.amount.value).replace('IDR', '').trim()}
-                        onChange={(e) => handleAmountFilterChange('value', e.target.value)}
+                        value={filters.timestamprq}
+                        onChange={(e) =>
+                          handleFilterChange('timestamprq', e.target.value)
+                        }
                       />
-                    </div>
-                  </td>
-                  <td className="py-2 pr-4">
-                    <select
-                      className="h-8 border border-input bg-background rounded-md px-2 w-full"
-                      value={filters.issuer}
-                      onChange={(e) => handleFilterChange('issuer', e.target.value)}
-                    >
-                      {uniqueIssuers.map(val => <option key={val} value={val}>{val}</option>)}
-                    </select>
-                  </td>
-                  <td className="py-2 pr-4">
-                    <select
-                      className="h-8 border border-input bg-background rounded-md px-2 w-full"
-                      value={filters.outlet}
-                      onChange={(e) => handleFilterChange('outlet', e.target.value)}
-                    >
-                      {uniqueOutlets.map(outlet => <option key={outlet} value={outlet}>{outlet}</option>)}
-                    </select>
-                  </td>
-                  <td className="py-2 pr-4">
-                    <select
-                      className="h-8 border border-input bg-background rounded-md px-2 w-full"
-                      value={filters.terminal}
-                      onChange={(e) => handleFilterChange('terminal', e.target.value)}
-                    >
-                      {uniqueTerminals.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </td>
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.rrn} onChange={(e) => handleFilterChange('rrn', e.target.value)} /></td>
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromname} onChange={(e) => handleFilterChange('fromname', e.target.value)} /></td>
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromacc} onChange={(e) => handleFilterChange('fromacc', e.target.value)} /></td>
-                  <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.toacc} onChange={(e) => handleFilterChange('toacc', e.target.value)} /></td>
-                </tr>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <div className="flex items-center gap-1">
+                        <select
+                          className="h-8 border border-input bg-background rounded-md px-2 text-xs"
+                          value={filters.amount.operator}
+                          onChange={(e) =>
+                            handleAmountFilterChange('operator', e.target.value)
+                          }
+                        >
+                          <option value="eq">=</option>
+                          <option value="gte">≥</option>
+                          <option value="lte">≤</option>
+                          <option value="gt">&gt;</option>
+                          <option value="lt">&lt;</option>
+                        </select>
+                        <Input
+                          type="text"
+                          placeholder="Value..."
+                          className="h-8"
+                          value={formatIDR(filters.amount.value)
+                            .replace('IDR', '')
+                            .trim()}
+                          onChange={(e) =>
+                            handleAmountFilterChange('value', e.target.value)
+                          }
+                        />
+                      </div>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <select
+                        className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                        value={filters.issuer}
+                        onChange={(e) =>
+                          handleFilterChange('issuer', e.target.value)
+                        }
+                      >
+                        {uniqueIssuers.map((val) => (
+                          <option key={val} value={val}>
+                            {val}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <select
+                        className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                        value={filters.outlet}
+                        onChange={(e) =>
+                          handleFilterChange('outlet', e.target.value)
+                        }
+                      >
+                        {uniqueOutlets.map((outlet) => (
+                          <option key={outlet} value={outlet}>
+                            {outlet}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <select
+                        className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                        value={filters.terminal}
+                        onChange={(e) =>
+                          handleFilterChange('terminal', e.target.value)
+                        }
+                      >
+                        {uniqueTerminals.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <Input
+                        placeholder="Filter..."
+                        className="h-8"
+                        value={filters.rrn}
+                        onChange={(e) =>
+                          handleFilterChange('rrn', e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="py-2 pr-4">
+                      <Input
+                        placeholder="Filter..."
+                        className="h-8"
+                        value={filters.fromname}
+                        onChange={(e) =>
+                          handleFilterChange('fromname', e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="py-2 pr-4">
+                      <Input
+                        placeholder="Filter..."
+                        className="h-8"
+                        value={filters.fromacc}
+                        onChange={(e) =>
+                          handleFilterChange('fromacc', e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="py-2 pr-4">
+                      <Input
+                        placeholder="Filter..."
+                        className="h-8"
+                        value={filters.toacc}
+                        onChange={(e) =>
+                          handleFilterChange('toacc', e.target.value)
+                        }
+                      />
+                    </td>
+                  </tr>
                 </thead>
                 <tbody>
-                {filteredHistory.map((row, idx) => (
-                  <tr key={idx} className="border-b border-dashed last:border-0">
-                    <td className="py-2 pr-4 whrowespace-nowrap">{new Date(row.timestamprq).toLocaleString('id-ID')}</td>
-                    <td className="py-2 pr-4 text-right font-mono">{formatIDR(row.amount)}</td>
-                    <td className="py-2 pr-4">{row.issuer.toUpperCase()}</td>
-                    <td className="py-2 pr-4">{row.outlet}</td>
-                    <td className="py-2 pr-4">{row.terminal}</td>
-                    <td className="py-2 pr-4 font-mono">{row.rrn}</td>
-                    <td className="py-2 pr-4">{row.fromname.toUpperCase() ?? 'N/A'}</td>
-                    <td className="py-2 pr-4 font-mono">{maskAcc(row.fromacc)}</td>
-                    <td className="py-2 pr-4 font-mono">{maskAcc(row.toacc)}</td>
-                  </tr>
-                ))}
+                  {filteredHistory.map((row, idx) => (
+                    <tr
+                      key={idx}
+                      className="border-b border-dashed last:border-0"
+                    >
+                      <td className="py-2 pr-4 text-center">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="size-8"
+                              onClick={() => handlePrintReceipt(row)}
+                            >
+                              <Printer className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Print Receipt</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </td>
+                      <td className="py-2 pr-4 whrowespace-nowrap">
+                        {new Date(row.timestamprq).toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-2 pr-4 text-right font-mono">
+                        {formatIDR(row.amount)}
+                      </td>
+                      <td className="py-2 pr-4">{row.issuer?.toUpperCase()}</td>
+                      <td className="py-2 pr-4">{row.outlet}</td>
+                      <td className="py-2 pr-4">{row.terminal}</td>
+                      <td className="py-2 pr-4 font-mono">{row.rrn}</td>
+                      <td className="py-2 pr-4">
+                        {row.fromname.toUpperCase() ?? 'N/A'}
+                      </td>
+                      <td className="py-2 pr-4 font-mono">
+                        {maskAcc(row.fromacc)}
+                      </td>
+                      <td className="py-2 pr-4 font-mono">
+                        {maskAcc(row.toacc)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
                 {isFiltered && (
                   <tfoot>
-                  <tr className="border-t border-dashed">
-                    <td className="py-2 pr-4 font-bold">Total Filtered</td>
-                    <td className="py-2 pr-4 text-right font-mono font-bold">{formatIDR(filteredTotals.totalAmount)}</td>
-                    <td colSpan="7" className="py-2 pr-4 text-right font-bold">{filteredTotals.count} records</td>
-                  </tr>
+                    <tr className="border-t border-dashed">
+                      <td></td>
+                      <td className="py-2 pr-4 font-bold">Total Filtered</td>
+                      <td className="py-2 pr-4 text-right font-mono font-bold">
+                        {formatIDR(filteredTotals.totalAmount)}
+                      </td>
+                      <td
+                        colSpan="7"
+                        className="py-2 pr-4 text-right font-bold"
+                      >
+                        {filteredTotals.count} records
+                      </td>
+                    </tr>
                   </tfoot>
                 )}
               </table>
               {filteredHistory.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-4">Tidak ada data yang cocok dengan filter.</div>
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  Tidak ada data yang cocok dengan filter.
+                </div>
               )}
             </>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={receiptModalOpen} onOpenChange={setReceiptModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Bukti Pembayaran</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div
+              id="receipt-content"
+              className="bg-white text-slate-800 font-sans relative overflow-hidden w-full"
+            >
+              {/* Watermark */}
+              <div
+                className="absolute inset-[-50%] z-0 opacity-[0.03] pointer-events-none m-10"
+                style={{
+                  backgroundImage: `url('/media/bsg/logo-master-dark.png')`,
+                  backgroundSize: '150px',
+                  backgroundRepeat: 'repeat',
+                  backgroundPosition: 'center',
+                  backgroundOrigin: 'content-box',
+                  transform: 'rotate(-15deg)',
+                }}
+              />
+
+              <div className="relative z-10 px-8 py-10 space-y-12 border-2 rounded-xl">
+                {/* Header */}
+                <div className="flex flex-col items-center justify-center pt-2 pb-4 border-b">
+                  <div className="mb-4">
+                    <img
+                      src={
+                        theme === 'dark'
+                          ? '/media/bsg/logo-master-light.png'
+                          : '/media/bsg/logo-master-dark.png'
+                      }
+                      alt="Logo"
+                      className="h-12 w-auto receipt-logo"
+                    />
+                  </div>
+
+                  <div className="bg-success/10 p-5 rounded-full mb-3">
+                    <CheckCircle2 className="size-32 text-green-500" />
+                  </div>
+
+                  <h3 className="text-xl font-bold uppercase text-center">
+                    {selectedTx?.outlet || merchant?.MRCName}
+                  </h3>
+
+                  <div className="mt-1">
+                    <Badge
+                      variant="success"
+                      appearance="light"
+                      className="text-[10px] font-bold px-2 py-0"
+                    >
+                      TRANSAKSI BERHASIL
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tanggal:</span>
+                    <span className="font-medium">
+                      {selectedTx
+                        ? new Date(selectedTx.timestamprq).toLocaleString(
+                            'id-ID',
+                          )
+                        : '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pengirim:</span>
+                    <span className="font-medium uppercase">
+                      {selectedTx?.fromname || 'N/A'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Issuer:</span>
+                    <span className="font-medium">
+                      {selectedTx?.issuer?.toUpperCase() || '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-t pt-3 mt-3">
+                    <span className="text-muted-foreground">RRN:</span>
+                    <span className="font-mono font-medium">
+                      {selectedTx?.rrn || '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-t pt-4 mt-4">
+                    <span className="text-lg font-bold">Total:</span>
+                    <span className="text-lg font-bold">
+                      {formatIDR(selectedTx?.amount || 0)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="text-center border-t pt-4">
+                  <p className="text-[10px] font-bold mt-1">Terima Kasih</p>
+                </div>
+              </div>
+            </div>
+
+            <style>
+              {`
+                @media print {
+                  @page {
+                    size: A4 portrait;
+                    margin: 0;
+                  }
+            
+                  html,
+                  body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    background: white !important;
+                  }
+            
+                  body * {
+                    visibility: hidden !important;
+                  }
+            
+                  #receipt-content,
+                  #receipt-content * {
+                    visibility: visible !important;
+                  }
+            
+                  /* Kill dialog constraints */
+                  [role="dialog"] {
+                    all: unset !important;
+                    display: block !important;
+                  }
+            
+                  #receipt-content {
+                    position: fixed !important;
+                    inset: 0 !important;
+            
+                    width: 100% !important;
+                    height: 100% !important;
+                    min-height: 297mm !important;
+                    max-width: none !important;
+            
+                    margin: 0 !important;
+                    padding: 20mm !important;
+            
+                    border: none !important;
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
+            
+                    background: white !important;
+                    overflow: hidden !important;
+                    transform: none !important;
+            
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                  }
+            
+                  .receipt-logo {
+                    content: url('/media/bsg/logo-master-dark.png');
+                  }
+                }
+              `}
+            </style>
+          </DialogBody>
+          <DialogFooter className="sm:justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setReceiptModalOpen(false)}
+            >
+              Close
+            </Button>
+            <Button onClick={() => window.print()}>
+              <Printer className="mr-2 size-4" />
+              Print Receipt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

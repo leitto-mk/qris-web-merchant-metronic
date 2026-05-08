@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
-import { LoaderCircleIcon, RotateCcw, X, Download } from 'lucide-react';
-import moment from 'moment';
-import QRCode from 'qrcode';
 import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
+import { CheckCircle2, Download, LoaderCircleIcon, Printer, RotateCcw, X } from 'lucide-react';
+import moment from 'moment';
+import { useTheme } from 'next-themes';
+import QRCode from 'qrcode';
 import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
@@ -11,8 +12,10 @@ import QRService from '@/services/QRService.js';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardHeading } from '@/components/ui/card.jsx';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.jsx';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
 import { Skeleton } from '@/components/ui/skeleton.jsx';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.jsx';
 import { Toolbar, ToolbarActions, ToolbarDescription, ToolbarHeading, ToolbarPageTitle } from '@/components/layouts/layout-32/components/toolbar.jsx';
 
 
@@ -23,6 +26,7 @@ import { Toolbar, ToolbarActions, ToolbarDescription, ToolbarHeading, ToolbarPag
  * @constructor
  */
 export function TerminalPage() {
+  const { theme } = useTheme();
   const { merchant, outlets, loading: appLoading } = useAppData();
 
   const [tab, setTab] = useState('outlet');
@@ -43,6 +47,15 @@ export function TerminalPage() {
   // Amount input state (formatted and numeric)
   const [amount, setAmount] = useState('');
   const [amountNumber, setAmountNumber] = useState(0);
+
+  // Receipt Modal State
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [selectedTx, setSelectedTx] = useState(null);
+
+  const handlePrintReceipt = (tx) => {
+    setSelectedTx(tx);
+    setReceiptModalOpen(true);
+  };
 
   // History states
   const startOfToday = () => moment().startOf('day').toDate();
@@ -270,18 +283,6 @@ export function TerminalPage() {
     if (!history.length) return [];
     const issuers = new Set(history.map(item => item.issuer).filter(Boolean));
     return ['All', ...Array.from(issuers)];
-  }, [history]);
-
-  const uniqueOutlets = useMemo(() => {
-    if (!history.length) return [];
-    const outlets = new Set(history.map(item => item.outlet).filter(Boolean));
-    return ['All', ...Array.from(outlets)];
-  }, [history]);
-
-  const uniqueTerminals = useMemo(() => {
-    if (!history.length) return [];
-    const terminals = new Set(history.map(item => item.terminal).filter(Boolean));
-    return ['All', ...Array.from(terminals)];
   }, [history]);
 
   const filteredHistory = useMemo(() => {
@@ -844,7 +845,10 @@ export function TerminalPage() {
                                 Pembayaran
                               </p>
                               <p className="text-5xl font-bold text-gray-800 mb-3">
-                                Rp{new Intl.NumberFormat('id-ID').format(payment?.amount || 0)}
+                                Rp
+                                {new Intl.NumberFormat('id-ID').format(
+                                  payment?.amount || 0,
+                                )}
                               </p>
                               <div className="flex flex-row justify-center gap-1">
                                 <i className="text-xl pi pi-clock text-gray-800"></i>
@@ -880,93 +884,234 @@ export function TerminalPage() {
                   <Card>
                     <CardHeader className="py-3.5 flex flex-row items-center justify-between">
                       <CardHeading>
-                        <div className="font-bold uppercase">Daftar Transaksi Hari Ini</div>
+                        <div className="font-bold uppercase">
+                          Daftar Transaksi Hari Ini
+                        </div>
                       </CardHeading>
                       <div className="flex gap-2">
-                         <Button variant="outline" size="sm" onClick={handleTransactionHistory} disabled={loadingHistory}>
-                           {loadingHistory ? 'Loading...' : 'Refresh'}
-                         </Button>
-                        <Button className={'bg-orange-400 hover:bg-orange-600 text-white'} onClick={exportToCsv} variant="outline" size="sm" disabled={loadingHistory || filteredHistory.length === 0}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleTransactionHistory}
+                          disabled={loadingHistory}
+                        >
+                          {loadingHistory ? 'Loading...' : 'Refresh'}
+                        </Button>
+                        <Button
+                          className={
+                            'bg-orange-400 hover:bg-orange-600 text-white'
+                          }
+                          onClick={exportToCsv}
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            loadingHistory || filteredHistory.length === 0
+                          }
+                        >
                           <Download className="size-3.5" />
                           <span>Export CSV</span>
                         </Button>
                       </div>
                     </CardHeader>
                     <CardContent className="overflow-x-auto">
-                      {errorHistory && <div className="text-red-500 mb-2">{errorHistory}</div>}
+                      {errorHistory && (
+                        <div className="text-red-500 mb-2">{errorHistory}</div>
+                      )}
                       {history.length === 0 && !loadingHistory ? (
-                        <div className="text-sm text-muted-foreground py-10 text-center">Belum ada data transaksi hari ini.</div>
+                        <div className="text-sm text-muted-foreground py-10 text-center">
+                          Belum ada data transaksi hari ini.
+                        </div>
                       ) : (
                         <table className="min-w-full text-sm">
                           <thead>
-                          <tr className="text-left border-b border-dashed">
-                            <th className="py-2 pr-4">Tanggal</th>
-                            <th className="py-2 pr-4 text-right">Amount</th>
-                            <th className="py-2 pr-4">Issuer</th>
-                            <th className="py-2 pr-4">RRN</th>
-                            <th className="py-2 pr-4">From Name</th>
-                            <th className="py-2 pr-4">From Acc</th>
-                            <th className="py-2 pr-4">To Acc</th>
-                          </tr>
-                          <tr className="text-left">
-                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.timestamprq} onChange={(e) => handleFilterChange('timestamprq', e.target.value)} /></td>
-                            <td className="py-2 pr-4">
-                              <div className="flex items-center gap-1">
-                                <select
-                                  className="h-8 border border-input bg-background rounded-md px-2 text-xs"
-                                  value={filters.amount.operator}
-                                  onChange={(e) => handleAmountFilterChange('operator', e.target.value)}
-                                >
-                                  <option value="eq">=</option>
-                                  <option value="gte">≥</option>
-                                  <option value="lte">≤</option>
-                                  <option value="gt">&gt;</option>
-                                  <option value="lt">&lt;</option>
-                                </select>
+                            <tr className="text-left border-b border-dashed">
+                              <th className="py-2 pr-4 text-center">Action</th>
+                              <th className="py-2 pr-4">Tanggal</th>
+                              <th className="py-2 pr-4 text-right">Amount</th>
+                              <th className="py-2 pr-4">Issuer</th>
+                              <th className="py-2 pr-4">RRN</th>
+                              <th className="py-2 pr-4">From Name</th>
+                              <th className="py-2 pr-4">From Acc</th>
+                              <th className="py-2 pr-4">To Acc</th>
+                            </tr>
+                            <tr className="text-left">
+                              <td className="py-2 pr-4"></td>
+                              <td className="py-2 pr-4">
                                 <Input
-                                  type="text"
-                                  placeholder="Value..."
+                                  placeholder="Filter..."
                                   className="h-8"
-                                  value={formatIDR(filters.amount.value).replace('IDR', '').trim()}
-                                  onChange={(e) => handleAmountFilterChange('value', e.target.value)}
+                                  value={filters.timestamprq}
+                                  onChange={(e) =>
+                                    handleFilterChange(
+                                      'timestamprq',
+                                      e.target.value,
+                                    )
+                                  }
                                 />
-                              </div>
-                            </td>
-                            <td className="py-2 pr-4">
-                              <select
-                                className="h-8 border border-input bg-background rounded-md px-2 w-full"
-                                value={filters.issuer}
-                                onChange={(e) => handleFilterChange('issuer', e.target.value)}
-                              >
-                                {uniqueIssuers.map(val => <option key={val} value={val}>{val}</option>)}
-                              </select>
-                            </td>
-                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.rrn} onChange={(e) => handleFilterChange('rrn', e.target.value)} /></td>
-                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromname} onChange={(e) => handleFilterChange('fromname', e.target.value)} /></td>
-                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.fromacc} onChange={(e) => handleFilterChange('fromacc', e.target.value)} /></td>
-                            <td className="py-2 pr-4"><Input placeholder="Filter..." className="h-8" value={filters.toacc} onChange={(e) => handleFilterChange('toacc', e.target.value)} /></td>
-                          </tr>
+                              </td>
+                              <td className="py-2 pr-4">
+                                <div className="flex items-center gap-1">
+                                  <select
+                                    className="h-8 border border-input bg-background rounded-md px-2 text-xs"
+                                    value={filters.amount.operator}
+                                    onChange={(e) =>
+                                      handleAmountFilterChange(
+                                        'operator',
+                                        e.target.value,
+                                      )
+                                    }
+                                  >
+                                    <option value="eq">=</option>
+                                    <option value="gte">≥</option>
+                                    <option value="lte">≤</option>
+                                    <option value="gt">&gt;</option>
+                                    <option value="lt">&lt;</option>
+                                  </select>
+                                  <Input
+                                    type="text"
+                                    placeholder="Value..."
+                                    className="h-8"
+                                    value={formatIDR(filters.amount.value)
+                                      .replace('IDR', '')
+                                      .trim()}
+                                    onChange={(e) =>
+                                      handleAmountFilterChange(
+                                        'value',
+                                        e.target.value,
+                                      )
+                                    }
+                                  />
+                                </div>
+                              </td>
+                              <td className="py-2 pr-4">
+                                <select
+                                  className="h-8 border border-input bg-background rounded-md px-2 w-full"
+                                  value={filters.issuer}
+                                  onChange={(e) =>
+                                    handleFilterChange('issuer', e.target.value)
+                                  }
+                                >
+                                  {uniqueIssuers.map((val) => (
+                                    <option key={val} value={val}>
+                                      {val}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="py-2 pr-4">
+                                <Input
+                                  placeholder="Filter..."
+                                  className="h-8"
+                                  value={filters.rrn}
+                                  onChange={(e) =>
+                                    handleFilterChange('rrn', e.target.value)
+                                  }
+                                />
+                              </td>
+                              <td className="py-2 pr-4">
+                                <Input
+                                  placeholder="Filter..."
+                                  className="h-8"
+                                  value={filters.fromname}
+                                  onChange={(e) =>
+                                    handleFilterChange(
+                                      'fromname',
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </td>
+                              <td className="py-2 pr-4">
+                                <Input
+                                  placeholder="Filter..."
+                                  className="h-8"
+                                  value={filters.fromacc}
+                                  onChange={(e) =>
+                                    handleFilterChange(
+                                      'fromacc',
+                                      e.target.value,
+                                    )
+                                  }
+                                />
+                              </td>
+                              <td className="py-2 pr-4">
+                                <Input
+                                  placeholder="Filter..."
+                                  className="h-8"
+                                  value={filters.toacc}
+                                  onChange={(e) =>
+                                    handleFilterChange('toacc', e.target.value)
+                                  }
+                                />
+                              </td>
+                            </tr>
                           </thead>
                           <tbody>
-                          {filteredHistory.map((row, idx) => (
-                            <tr key={idx} className="border-b border-dashed last:border-0">
-                              <td className="py-2 pr-4 whitespace-nowrap">{new Date(row.timestamprq).toLocaleString('id-ID')}</td>
-                              <td className="py-2 pr-4 text-right font-mono">{formatIDR(row.amount)}</td>
-                              <td className="py-2 pr-4">{row.issuer.toUpperCase()}</td>
-                              <td className="py-2 pr-4 font-mono">{row.rrn}</td>
-                              <td className="py-2 pr-4">{row.fromname.toUpperCase() ?? 'N/A'}</td>
-                              <td className="py-2 pr-4 font-mono">{maskAcc(row.fromacc)}</td>
-                              <td className="py-2 pr-4 font-mono">{maskAcc(row.toacc)}</td>
-                            </tr>
-                          ))}
+                            {filteredHistory.map((row, idx) => (
+                              <tr
+                                key={idx}
+                                className="border-b border-dashed last:border-0"
+                              >
+                                <td className="py-2 pr-4 text-center">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="size-8"
+                                        onClick={() => handlePrintReceipt(row)}
+                                      >
+                                        <Printer className="size-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Print Receipt</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </td>
+                                <td className="py-2 pr-4 whitespace-nowrap">
+                                  {new Date(row.timestamprq).toLocaleString(
+                                    'id-ID',
+                                  )}
+                                </td>
+                                <td className="py-2 pr-4 text-right font-mono">
+                                  {formatIDR(row.amount)}
+                                </td>
+                                <td className="py-2 pr-4">
+                                  {row.issuer.toUpperCase()}
+                                </td>
+                                <td className="py-2 pr-4 font-mono">
+                                  {row.rrn}
+                                </td>
+                                <td className="py-2 pr-4">
+                                  {row.fromname.toUpperCase() ?? 'N/A'}
+                                </td>
+                                <td className="py-2 pr-4 font-mono">
+                                  {maskAcc(row.fromacc)}
+                                </td>
+                                <td className="py-2 pr-4 font-mono">
+                                  {maskAcc(row.toacc)}
+                                </td>
+                              </tr>
+                            ))}
                           </tbody>
                           {isFiltered && (
                             <tfoot>
-                            <tr className="border-t border-dashed">
-                              <td className="py-2 pr-4 font-bold">Total Filtered</td>
-                              <td className="py-2 pr-4 text-right font-mono font-bold">{formatIDR(filteredTotals.totalAmount)}</td>
-                              <td colSpan="7" className="py-2 pr-4 text-right font-bold">{filteredTotals.count} records</td>
-                            </tr>
+                              <tr className="border-t border-dashed">
+                                <td></td>
+                                <td className="py-2 pr-4 font-bold">
+                                  Total Filtered
+                                </td>
+                                <td className="py-2 pr-4 text-right font-mono font-bold">
+                                  {formatIDR(filteredTotals.totalAmount)}
+                                </td>
+                                <td
+                                  colSpan="7"
+                                  className="py-2 pr-4 text-right font-bold"
+                                >
+                                  {filteredTotals.count} records
+                                </td>
+                              </tr>
                             </tfoot>
                           )}
                         </table>
@@ -979,6 +1124,190 @@ export function TerminalPage() {
           )}
         </>
       )}
+
+      <Dialog open={receiptModalOpen} onOpenChange={setReceiptModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Bukti Pembayaran</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <div
+              id="receipt-content"
+              className="bg-white text-slate-800 font-sans relative overflow-hidden w-full"
+            >
+              {/* Watermark */}
+              <div
+                className="absolute inset-[-50%] z-0 opacity-[0.03] pointer-events-none m-10"
+                style={{
+                  backgroundImage: `url('/media/bsg/logo-master-dark.png')`,
+                  backgroundSize: '150px',
+                  backgroundRepeat: 'repeat',
+                  backgroundPosition: 'center',
+                  backgroundOrigin: 'content-box',
+                  transform: 'rotate(-15deg)',
+                }}
+              />
+
+              <div className="relative z-10 px-8 py-10 space-y-12 border-2 rounded-xl">
+                {/* Header */}
+                <div className="flex flex-col items-center justify-center pt-2 pb-4 border-b">
+                  <div className="mb-4">
+                    <img
+                      src={
+                        theme === 'dark'
+                          ? '/media/bsg/logo-master-light.png'
+                          : '/media/bsg/logo-master-dark.png'
+                      }
+                      alt="Logo"
+                      className="h-12 w-auto receipt-logo"
+                    />
+                  </div>
+
+                  <div className="bg-success/10 p-5 rounded-full mb-3">
+                    <CheckCircle2 className="size-32 text-green-500" />
+                  </div>
+
+                  <h3 className="text-xl font-bold uppercase text-center">
+                    {selectedTx?.outlet || merchant?.MRCName}
+                  </h3>
+
+                  <div className="mt-1">
+                    <Badge
+                      variant="success"
+                      appearance="light"
+                      className="text-[10px] font-bold px-2 py-0"
+                    >
+                      TRANSAKSI BERHASIL
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tanggal:</span>
+                    <span className="font-medium">
+                      {selectedTx
+                        ? new Date(selectedTx.timestamprq).toLocaleString(
+                            'id-ID',
+                          )
+                        : '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pengirim:</span>
+                    <span className="font-medium uppercase">
+                      {selectedTx?.fromname || 'N/A'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Issuer:</span>
+                    <span className="font-medium">
+                      {selectedTx?.issuer?.toUpperCase() || '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-t pt-3 mt-3">
+                    <span className="text-muted-foreground">RRN:</span>
+                    <span className="font-mono font-medium">
+                      {selectedTx?.rrn || '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-t pt-4 mt-4">
+                    <span className="text-lg font-bold">Total:</span>
+                    <span className="text-lg font-bold">
+                      {formatIDR(selectedTx?.amount || 0)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="text-center border-t pt-4">
+                  <p className="text-[10px] font-bold mt-1">Terima Kasih</p>
+                </div>
+              </div>
+            </div>
+
+            <style>
+              {`
+                @media print {
+                  @page {
+                    size: A4 portrait;
+                    margin: 0;
+                  }
+            
+                  html,
+                  body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    background: white !important;
+                  }
+            
+                  body * {
+                    visibility: hidden !important;
+                  }
+            
+                  #receipt-content,
+                  #receipt-content * {
+                    visibility: visible !important;
+                  }
+            
+                  /* Kill dialog constraints */
+                  [role="dialog"] {
+                    all: unset !important;
+                    display: block !important;
+                  }
+            
+                  #receipt-content {
+                    position: fixed !important;
+                    inset: 0 !important;
+            
+                    width: 100% !important;
+                    height: 100% !important;
+                    min-height: 297mm !important;
+                    max-width: none !important;
+            
+                    margin: 0 !important;
+                    padding: 20mm !important;
+            
+                    border: none !important;
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
+            
+                    background: white !important;
+                    overflow: hidden !important;
+                    transform: none !important;
+            
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                  }
+            
+                  .receipt-logo {
+                    content: url('/media/bsg/logo-master-dark.png');
+                  }
+                }
+              `}
+            </style>
+          </DialogBody>
+          <DialogFooter className="sm:justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setReceiptModalOpen(false)}
+            >
+              Close
+            </Button>
+            <Button onClick={() => window.print()}>
+              <Printer className="mr-2 size-4" />
+              Print Receipt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
