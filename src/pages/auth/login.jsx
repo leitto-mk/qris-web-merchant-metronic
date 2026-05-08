@@ -319,12 +319,26 @@ export function LoginPage() {
       }
   };
 
+  const loginImageRandomizer = () => {
+    const images = [
+      'media/bsg/login1.png',
+      'media/bsg/login2.png'
+    ];
+
+    //Match Milliseconds with the current Epoch Timestamp
+    const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
+    const period = Math.floor(Date.now() / TWO_WEEKS_MS);
+    const index = period % images.length;
+
+    return images[index];
+  }
+
   return (
     <div className="bg-[#13131a] flex h-screen w-full overflow-hidden">
       {/* Left Section - Decorative, hidden on small screens */}
       <div className="hidden md:block md:w-2/4 h-full overflow-hidden shrink-0">
         <img
-          src="media/bsg/login1.png"
+          src={loginImageRandomizer()}
           alt="BSG Web Merchant"
           className="w-full h-full"
         />
