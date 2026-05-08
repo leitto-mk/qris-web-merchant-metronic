@@ -3,7 +3,7 @@
 
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-const devices = ['QRIS Static', 'QRIS Dynamic', 'MPOS', 'Mobile'];
+const issuers = ['BNI', 'BCA', 'Mandiri', 'BSG', 'Permata', 'Danamon', 'CIMB Niaga', 'BRI', 'OCBC NISP'];
 const outlets = ['Outlet Pusat', 'Outlet Sudirman', 'Outlet Thamrin', 'Outlet Kemang', 'Outlet Kelapa Gading'];
 
 function randomAccount() {
@@ -42,7 +42,7 @@ export default function generateTransactionHistory({ count = 50, from, to, merch
   for (let i = 0; i < count; i++) {
     const ts = randInt(minTs, maxTs);
     const amount = randInt(10_000, 2_000_000); // 10K — 2M IDR
-    const device = devices[randInt(0, devices.length - 1)];
+    const issuer = issuers[randInt(0, issuers.length - 1)];
     const outlet = outlets[randInt(0, outlets.length - 1)];
     const terminal = randomTerminal();
     const rrn = randomRRN();
@@ -53,7 +53,7 @@ export default function generateTransactionHistory({ count = 50, from, to, merch
     arr.push({
       timestamprq: new Date(ts).toISOString(),
       amount,
-      device,
+      issuer,
       outlet,
       terminal,
       rrn,
