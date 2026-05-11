@@ -92,23 +92,14 @@ export function TerminalPage() {
       const sanitizedPayload = JSON.parse(JSON.stringify(payload));
       channel.postMessage(sanitizedPayload);
       channel.close();
-
-      // Fallback for environments without BroadcastChannel:
-      // trigger same-origin tabs via localStorage 'storage' event
-      try {
-        const withTs = { ...sanitizedPayload, __ts: Date.now() };
-        localStorage.setItem('bsgqr-payment-sync', JSON.stringify(withTs));
-      } catch (e) {
-        console.error(e.message || e);
-      }
     } catch (e) {
       console.error(e.message || e);
-      // this.$toast?.add?.({
-      //   severity: 'error',
-      //   summary: 'Error',
-      //   detail: 'QR Dinamis tidak bisa ditampilkan',
-      //   life: 5000
-      // });
+      this.$toast?.add?.({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Kendala menampilkan QR Dinamis pada Layar yang lain',
+        life: 5000
+      });
     }
   }, []);
 
