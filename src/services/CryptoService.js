@@ -75,12 +75,12 @@ const CryptoService = {
    * @param {string} kdUser
    * @param {CryptoKey} privateKey
    */
-  async saveKeys(kdUser, privateKey, publicKey) {
+  async saveKeys(kdUser, privateKey) {
     const db = await this._openDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({ kdUser, privateKey, publicKey }, KEY_NAME);
+      const request = store.put({ kdUser, privateKey }, KEY_NAME);
       request.onsuccess = () => {
         db.close();
         resolve();
@@ -94,7 +94,6 @@ const CryptoService = {
 
   /**
    * Retrieves keys from IndexedDB.
-   * @param {string} kdUser
    * @returns {Promise<{privateKey: CryptoKey, publicKey: string} | null>}
    */
   async getKeys() {

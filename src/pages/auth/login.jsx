@@ -241,7 +241,7 @@ export function LoginPage() {
     await AuthService.registerPublicKey(publicKey);
 
     // Save to IndexedDB
-    await CryptoService.saveKeys(userKd, privateKey, publicKey);
+    await CryptoService.saveKeys(userKd, privateKey);
 
     // 2. Get Challenge from Backend
     const { challenge: newChallenge } = await AuthService.getChallenge();
