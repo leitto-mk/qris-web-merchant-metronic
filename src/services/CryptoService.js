@@ -80,7 +80,11 @@ const CryptoService = {
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({ kdUser, privateKey }, KEY_NAME);
+      const request = store.put({
+        kdUser,
+        generatedAt: new Date().toISOString(),
+        privateKey
+      }, KEY_NAME);
       request.onsuccess = () => {
         db.close();
         resolve();
