@@ -49,7 +49,7 @@ const QRService = {
     },
     get51(JSONData) {
         let str51 = '';
-        str51 += this.add('01', JSONData.domain2);
+        str51 += this.add('00', JSONData.domain2);
         str51 += this.add('02', JSONData.NMID);
         str51 += this.add('03', JSONData.kriteria);
         return str51;
