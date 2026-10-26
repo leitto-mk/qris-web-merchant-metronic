@@ -161,7 +161,8 @@ const axiosInstance = () => {
 
       const shouldToast = shouldToastForUrl(error?.config?.url);
       if (shouldToast) {
-        toast.error('Proses Gagal');
+        const errorMsg = error?.response?.data?.error_msg;
+        toast.error(errorMsg ? 'Proses Gagal: ' + errorMsg : 'Proses Gagal');
       }
 
       return Promise.reject(error);
