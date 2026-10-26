@@ -36,8 +36,8 @@ function buildExpandedDetails(merchant, data, openModal) {
     return {
       ...terminal,
       userLabel: terminal?.kd_user || '-',
-      deviceLabel: matchedMerchantUser.device,
-      webLabel: matchedMerchantUser.web_status,
+      deviceLabel: matchedMerchantUser?.device ?? 'N/A',
+      webLabel: matchedMerchantUser?.web_status ?? 'INACTIVE',
     };
   });
 
@@ -107,7 +107,7 @@ function buildExpandedDetails(merchant, data, openModal) {
             <CardContent className="pt-0">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
                 <span className="text-muted-foreground">Cabang</span>
-                <Badge>{data.branchInfo.ket}</Badge>
+                <Badge>{data.branchInfo?.ket ?? '-'}</Badge>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
                 <span className="text-muted-foreground">Nama Merchant</span>
@@ -437,7 +437,7 @@ function buildExpandedDetails(merchant, data, openModal) {
 }
 
 const ModalContents = {
-  AddDeviceModalContent: ({ selected, closeModal }) => {
+  AddDeviceModalContent: ({ selected }) => {
     const queryClient = useQueryClient();
     const steps = [
       { title: 'Ketentuan' },
@@ -449,22 +449,17 @@ const ModalContents = {
     const [sending, setSending] = useState(false);
     const [onShow, setOnShow] = useState(false);
     const [confirmPwd, setConfirmPwd] = useState('');
-    const [emailFailAttempts, setEmailFailAttempts] = useState(
-      Number(selected?.email_fail_attempts ?? 0),
-    );
+    const [confirmed, setConfirmed] = useState(false);
+    const [sendError, setSendError] = useState(null);
 
     const confirmPassword = useCallback(async () => {
       try {
         setLoading(true);
         await AuthService.confirmPassword(confirmPwd);
         setConfirmPwd('');
-        if (selected) {
-          selected.outlet_confirmed_add_device = true;
-        }
+        setConfirmed(true);
       } catch (error) {
-        if (selected) {
-          selected.outlet_confirmed_add_device = false;
-        }
+        setConfirmed(false);
         console.error(
           'Konfirmasi password gagal:',
           error?.response?.data?.errors ?? error,
@@ -472,10 +467,11 @@ const ModalContents = {
       } finally {
         setLoading(false);
       }
-    }, [confirmPwd, selected]);
+    }, [confirmPwd]);
 
     const addTerminal = useCallback(() => {
       setSending(true);
+      setSendError(null);
       const session = AuthService.retrieveSession();
       if (!session || !session.kd_user) {
         console.error('Sesi pengguna tidak tersedia. Silakan login kembali.');
@@ -489,11 +485,13 @@ const ModalContents = {
           outlet: selected.XID,
         })
         .then(() => {
-          queryClient.invalidateQueries(['outlets', session.kd_user]);
-          closeModal();
+          queryClient.invalidateQueries({ queryKey: ['outlets'] });
         })
         .catch((error) => {
-          setEmailFailAttempts((prev) => prev + 1);
+          setSendError(
+            error?.response?.data?.error_msg ??
+              'Terjadi kesalahan saat memproses permintaan.',
+          );
           console.error(
             'Penambahan Terminal gagal:',
             error?.response?.data?.errors ?? error,
@@ -502,7 +500,7 @@ const ModalContents = {
         .finally(() => {
           setSending(false);
         });
-    }, [selected, closeModal, queryClient]);
+    }, [selected, queryClient]);
 
     return (
       <>
@@ -545,9 +543,7 @@ const ModalContents = {
                       <div className="flex flex-col gap-3 h-fit">
                         <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 p-5">
                           <span className="font-bold">
-                            {selected?.namaOutlet ||
-                              selected?.outletName ||
-                              'Outlet Terpilih'}
+                            {selected?.outlatName || 'Outlet Terpilih'}
                           </span>
                           <br />
                           <br />
@@ -630,7 +626,7 @@ const ModalContents = {
                 {index === 1 && (
                   <>
                     <div className="w-full">
-                      {selected?.outlet_confirmed_add_device !== true ? (
+                      {!confirmed ? (
                         <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 p-5 h-full">
                           Silahkan masukan password untuk konfirmasi penambahan
                           perangkat pada outlet:
@@ -640,7 +636,7 @@ const ModalContents = {
                             <InputWrapper className="h-11 border-xl w-1/2">
                               <Key />
                               <Input
-                                className="text-white font-semibold ml-1"
+                                className="font-semibold ml-1"
                                 type={onShow ? 'text' : 'password'}
                                 placeholder="Password"
                                 value={confirmPwd}
@@ -682,10 +678,7 @@ const ModalContents = {
                           <div className="flex flex-col gap-5 justify-center m-10 items-center">
                             <div className="flex flex-wrap justify-center">
                               <div className="border-2 rounded-full p-5 border-slate-300 w-fit">
-                                <Check
-                                  className="text-green-400"
-                                  style={{ fontSize: '5rem' }}
-                                />
+                                <Check className="size-20 text-green-400" />
                               </div>
                             </div>
                             <span className="text-xl font-bold text-slate-500 dark:text-slate-300">
@@ -700,12 +693,12 @@ const ModalContents = {
                           variant="outline"
                           onClick={() => {
                             setStep(1);
-                            selected.outlet_confirmed_add_device = false;
+                            setConfirmed(false);
                           }}
                         >
                           Kembali
                         </Button>
-                        {selected?.outlet_confirmed_add_device ? (
+                        {confirmed ? (
                           <Button
                             onClick={() => {
                               setStep(3);
@@ -737,19 +730,18 @@ const ModalContents = {
                               Harap tunggu, proses sedang berjalan.
                             </div>
                           </div>
-                        ) : emailFailAttempts > 0 ? (
+                        ) : sendError ? (
                           <div className="border-2 border-dashed border-destructive/40 rounded bg-destructive/5 p-5 h-full w-full">
                             <div className="flex flex-col items-center justify-center gap-2">
                               <div className="font-bold text-destructive">
-                                Gagal mengirim email username
+                                Gagal menambahkan terminal
                               </div>
                               <div className="text-sm text-muted-foreground text-center">
-                                Terjadi kesalahan saat memproses permintaan.
-                                Silakan coba lagi.
+                                {sendError}
                               </div>
                             </div>
                           </div>
-                        ) : selected?.outlet_confirmed_add_device ? (
+                        ) : confirmed ? (
                           <div className="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 p-5 h-full w-full">
                             Username telah dikirimkan pada email berikut:
                             <br />
@@ -774,7 +766,7 @@ const ModalContents = {
                       </div>
 
                       <div className="flex pt-6 gap-3 justify-between">
-                        {emailFailAttempts > 0 ? (
+                        {sendError ? (
                           <Button
                             variant="outline"
                             onClick={addTerminal}
@@ -790,7 +782,7 @@ const ModalContents = {
                           <span />
                         )}
 
-                        {selected?.outlet_confirmed_add_device ? (
+                        {confirmed ? (
                           <DialogClose asChild>
                             <Button variant="mono" disabled={sending}>
                               Tutup
@@ -940,43 +932,7 @@ const ModalContents = {
           type: resetType,
         });
 
-        // Update local data
-        if (selected?.merchantUser && selected?.terminal) {
-          const terminal = selected.terminal.find((t) => t.XID === resetDeviceXID);
-          if (terminal && terminal.kd_user) {
-            const userIndex = selected.merchantUser.findIndex(
-              (u) => u.kd_user === terminal.kd_user,
-            );
-
-            if (userIndex !== -1) {
-              const updatedMerchantUser = [...selected.merchantUser];
-              const user = { ...updatedMerchantUser[userIndex] };
-
-              if (resetType === 'MOB' || resetType === 'ALL') {
-                user.device = null;
-                user.status = 3;
-              }
-
-              if (resetType === 'WEB' || resetType === 'ALL') {
-                user.web_status = 'INACTIVE';
-              }
-
-              updatedMerchantUser[userIndex] = user;
-              selected.merchantUser = updatedMerchantUser;
-
-              // Invalidate queries to ensure UI is in sync if needed, 
-              // but since we modified 'selected' object which is likely a reference to the data in cache, 
-              // it might already be updated in some views. 
-              // However, React Query data should be updated via queryClient.setQueryData or invalidated.
-              const session = AuthService.retrieveSession();
-              if (session && session.kd_user) {
-                queryClient.invalidateQueries(['outlets', session.kd_user]);
-              } else {
-                queryClient.invalidateQueries('outlets');
-              }
-            }
-          }
-        }
+        queryClient.invalidateQueries({ queryKey: ['outlets'] });
 
         // Close modal after successful request
         closeModal();
@@ -988,7 +944,7 @@ const ModalContents = {
       } finally {
         setLoading(false);
       }
-    }, [resetDeviceXID, closeModal, resetType, selected, queryClient]);
+    }, [resetDeviceXID, closeModal, resetType, queryClient]);
 
     return (
       <div className="flex flex-col gap-5">
@@ -1226,11 +1182,8 @@ function OutletPageSkeleton() {
 export function OutletPage() {
   const { merchant, outlets, loading } = useAppData();
 
-  const [sorting, setSorting] = useState([{ id: 'outlatName', desc: true }]);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: (outlets?.length ?? 0) < 10 ? 10 : 5,
-  });
+  const [sorting, setSorting] = useState([{ id: 'outlatName', desc: false }]);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1312,7 +1265,7 @@ export function OutletPage() {
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p className="uppercase">
-                    {data.row.original.branchInfo.ket}
+                    {data.row.original.branchInfo?.ket ?? '-'}
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -1347,7 +1300,7 @@ export function OutletPage() {
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p className="uppercase">
-                    {data.row.original.merchantCriteria.ket}
+                    {data.row.original.merchantCriteria?.ket ?? '-'}
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -1373,7 +1326,7 @@ export function OutletPage() {
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p className="uppercase">
-                    {data.row.original.merchantCategory.ket_indo}
+                    {data.row.original.merchantCategory?.ket_indo ?? '-'}
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -1423,7 +1376,7 @@ export function OutletPage() {
     columns,
     data: outlets,
     pageCount: Math.ceil((outlets?.length ?? 0) / pagination.pageSize),
-    getRowId: (row) => row.xid,
+    getRowId: (row) => String(row.XID),
     getRowCanExpand: (row) => Boolean(row.original.XID),
     state: {
       pagination,
