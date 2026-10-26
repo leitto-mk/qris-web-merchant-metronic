@@ -4,6 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 
 const AppDataContext = createContext();
 
+// Outlets carry ~400 KB QR images each; don't refetch on every focus. Mutations invalidate explicitly.
+const STALE_TIME = 5 * 60 * 1000;
+
 export const AppDataProvider = ({ session, children }) => {
   const kdUser = session?.kd_user;
 
@@ -14,6 +17,7 @@ export const AppDataProvider = ({ session, children }) => {
       return res.data?.data ?? null;
     },
     enabled: Boolean(kdUser),
+    staleTime: STALE_TIME,
   });
 
   const outletsQuery = useQuery({
@@ -25,6 +29,7 @@ export const AppDataProvider = ({ session, children }) => {
       return Array.isArray(data) ? data : (data ? [data] : []);
     },
     enabled: Boolean(kdUser),
+    staleTime: STALE_TIME,
   });
 
   const loading = merchantQuery.isLoading || outletsQuery.isLoading;
