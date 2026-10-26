@@ -23,6 +23,19 @@ import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Stepper, StepperContent, StepperIndicator, StepperItem, StepperNav, StepperPanel, StepperSeparator, StepperTitle, StepperTrigger } from '@/components/ui/stepper.jsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+function InfoRow({ label, value, className = '', children }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
+      <span className="text-muted-foreground">{label}</span>
+      {children ?? (
+        <span className={`sm:text-right break-words max-w-full sm:max-w-[60%] ${className}`}>
+          {value || '-'}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function buildExpandedDetails(merchant, data, openModal) {
   const merchantUsersByKdUser = new Map(
     (data?.merchantUser ?? [])
@@ -105,62 +118,25 @@ function buildExpandedDetails(merchant, data, openModal) {
               </CardHeading>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Cabang</span>
+              <InfoRow label="Cabang">
                 <Badge>{data.branchInfo?.ket ?? '-'}</Badge>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Nama Merchant</span>
-                <span className="uppercase sm:text-right max-w-full sm:max-w-[60%] break-words">
-                  {merchant.MRCName}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Nama Outlet</span>
-                <span className="uppercase sm:text-right max-w-full sm:max-w-[60%] break-words">
-                  {data.outlatName}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Tipe Usaha</span>
-                <span className="sm:text-right">
-                  {data.tipe_usaha === 'INDIVIDU'
-                    ? 'INDIVIDU'
-                    : 'BADAN USAHA'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Kategori</span>
-                <span className="sm:text-right max-w-full sm:max-w-[60%] break-words">
-                  {data.kategori || '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Kriteria Merchant</span>
-                <Badge>{data.kriteria}</Badge>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">MCC</span>
+              </InfoRow>
+              <InfoRow label="Nama Merchant" value={merchant?.MRCName} className="uppercase" />
+              <InfoRow label="Nama Outlet" value={data.outlatName} className="uppercase" />
+              <InfoRow
+                label="Tipe Usaha"
+                value={data.tipe_usaha === 'INDIVIDU' ? 'INDIVIDU' : 'BADAN USAHA'}
+              />
+              <InfoRow label="Kategori" value={data.kategori} />
+              <InfoRow label="Kriteria Merchant">
+                <Badge>{data.kriteria || '-'}</Badge>
+              </InfoRow>
+              <InfoRow label="MCC">
                 <Badge variant="secondary">{data.mcc || '-'}</Badge>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">MPAN</span>
-                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
-                  {data.MPAN || '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">MID</span>
-                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
-                  {data.MID || '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">NMID</span>
-                <span className="sm:text-right max-w-full sm:max-w-[60%] break-all">
-                  {data.nmid || '-'}
-                </span>
-              </div>
+              </InfoRow>
+              <InfoRow label="MPAN" value={data.MPAN} />
+              <InfoRow label="MID" value={data.MID} />
+              <InfoRow label="NMID" value={data.nmid} />
             </CardContent>
           </Card>
         </div>
@@ -179,60 +155,20 @@ function buildExpandedDetails(merchant, data, openModal) {
               </CardHeading>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Alamat</span>
-                <span className="sm:text-right break-words max-w-full sm:max-w-[65%]">
-                  {`${data.outlatAddress}, ${data.kota} ${data.kdPost}`}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">KTP</span>
-                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
-                  {data.ktp ?? '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">NPWP</span>
-                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
-                  {data.npwp ?? '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">No. HP</span>
-                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
-                  {data.phonenum}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Email</span>
-                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
-                  {data.email}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Legalitas Usaha</span>
-                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
-                  {data.legalitas_usaha}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">No. Legalitas Usaha</span>
-                <span className="sm:text-right max-w-full sm:max-w-[65%] break-words">
-                  {data.no_legalitas_usaha ?? '-'}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">No. Rekening</span>
-                <span className="sm:text-right break-all max-w-full sm:max-w-[65%]">
-                  {data.acc_no}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
-                <span className="text-muted-foreground">Nama Pemilik Rekening</span>
-                <span className="sm:text-right break-words max-w-full sm:max-w-[65%]">
-                  {data.acc_name}
-                </span>
-              </div>
+              <InfoRow
+                label="Alamat"
+                value={[data.outlatAddress, [data.kota, data.kdPost].filter(Boolean).join(' ')]
+                  .filter(Boolean)
+                  .join(', ')}
+              />
+              <InfoRow label="KTP" value={data.ktp} />
+              <InfoRow label="NPWP" value={data.npwp} />
+              <InfoRow label="No. HP" value={data.phonenum} />
+              <InfoRow label="Email" value={data.email} />
+              <InfoRow label="Legalitas Usaha" value={data.legalitas_usaha} />
+              <InfoRow label="No. Legalitas Usaha" value={data.no_legalitas_usaha} />
+              <InfoRow label="No. Rekening" value={data.acc_no} />
+              <InfoRow label="Nama Pemilik Rekening" value={data.acc_name} />
             </CardContent>
           </Card>
         </div>
@@ -266,13 +202,6 @@ function buildExpandedDetails(merchant, data, openModal) {
                           {terminal.TerminalID || '-'}
                         </div>
                       </div>
-
-                      {/*<Badge*/}
-                      {/*  variant={terminal.TerminalID === 'A01' ? 'primary' : 'secondary'}*/}
-                      {/*  className="uppercase shrink-0"*/}
-                      {/*>*/}
-                      {/*  {terminal.TerminalID === 'A01' ? 'Default' : 'Active'}*/}
-                      {/*</Badge>*/}
                     </div>
 
                     <div className="mt-4 space-y-3">
@@ -1074,6 +1003,23 @@ const ModalContents = {
   }
 };
 
+// Dialog titles and descriptions per modal
+const MODAL_META = {
+  AddDeviceModalContent: {
+    title: 'Tambah Perangkat',
+    description:
+      'Ikuti langkah untuk menambahkan perangkat baru pada outlet terpilih.',
+  },
+  ResetPasswordTerminalModalContent: {
+    title: 'Reset User Password',
+    description: 'Pilih Terminal untuk melakukan reset password.',
+  },
+  ResetDeviceMerchantModalContent: {
+    title: 'Reset Perangkat',
+    description: 'Pilih Terminal yang digunakan pada Perangkat',
+  },
+};
+
 function buildActionsMenu(row, openModal) {
   const merchantUsers = row?.original?.merchantUser ?? [];
   const hasMerchantUser = merchantUsers.some((item) => item?.kd_user);
@@ -1191,30 +1137,10 @@ export function OutletPage() {
   const [currentModalKey, setCurrentModalKey] = useState(null);
   const [modalInitialState, setModalInitialState] = useState(null);
 
-  // Modal metadata for dynamic titles and descriptions
-  const modalMeta = useMemo(
-    () => ({
-      AddDeviceModalContent: {
-        title: 'Tambah Perangkat',
-        description:
-          'Ikuti langkah untuk menambahkan perangkat baru pada outlet terpilih.',
-      },
-      ResetPasswordTerminalModalContent: {
-        title: 'Reset User Password',
-        description: 'Pilih Terminal untuk melakukan reset password.',
-      },
-      ResetDeviceMerchantModalContent: {
-        title: 'Reset Perangkat',
-        description: 'Pilih Terminal yang digunakan pada Perangkat',
-      }
-    }),
-    [],
-  );
-
   const { title: currentDialogTitle, description: currentDialogDescription } =
     useMemo(() => {
-      const meta = currentModalKey ? modalMeta[currentModalKey] : null;
-      const outletName = selectedRow?.outlatName || selectedRow?.namaOutlet;
+      const meta = currentModalKey ? MODAL_META[currentModalKey] : null;
+      const outletName = selectedRow?.outlatName;
       const titleWithContext = meta?.title
         ? `${meta.title}${
             outletName ? ` • ${String(outletName).toUpperCase()}` : ''
@@ -1224,7 +1150,7 @@ export function OutletPage() {
         title: titleWithContext,
         description: meta?.description ?? '',
       };
-    }, [currentModalKey, selectedRow, modalMeta]);
+    }, [currentModalKey, selectedRow]);
 
   const openModal = useCallback((key, row, initialState = null) => {
     setSelectedRow(row?.original ?? row);
@@ -1429,14 +1355,7 @@ export function OutletPage() {
       {/* Action Modal Dialog */}
       <Dialog
         open={isModalOpen}
-        onOpenChange={(open) => {
-          setIsModalOpen(open);
-          if (!open) {
-            setSelectedRow(null);
-            setCurrentModalKey(null);
-            setModalInitialState(null);
-          }
-        }}
+        onOpenChange={(open) => (open ? setIsModalOpen(true) : closeModal())}
       >
         <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] max-w-[1200px] flex-col gap-5 overflow-y-auto">
           <DialogTitle>{currentDialogTitle}</DialogTitle>
