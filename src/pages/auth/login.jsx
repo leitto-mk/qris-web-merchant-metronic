@@ -103,11 +103,24 @@ export function LoginPage() {
       const storedKeys = await CryptoService.getKeys();
       const kdUser = storedKeys?.kdUser ?? values.username;
 
-      const data = await AuthService.login({
-        username: values.username,
-        password: values.password,
-        terminal_origin: kdUser
-      });
+      let data;
+      try {
+        data = await AuthService.login({
+          username: values.username,
+          password: values.password,
+          terminal_origin: kdUser
+        });
+      } catch (e) {
+        if (e.message !== 'CHALLENGE_REQUIRED') throw e;
+
+        // Password is right but the terminal is bound: only the browser holding its key may log in
+        if (storedKeys?.kdUser?.toLowerCase() !== values.username.toLowerCase()) {
+          throw new Error('User Terminal tidak terdaftar untuk Device ini.');
+        }
+
+        await handleTerminalLogin();
+        return;
+      }
 
       if(data.status === 3) {
         setPinExpiredAt(null);
@@ -116,15 +129,8 @@ export function LoginPage() {
         return;
       }
 
-      const access_type = data.access_type;
-      const web_status = data.web_status;
-
-      if (access_type === 'TRM' && web_status === 'ACTIVE' && !storedKeys) {
-        throw new Error('User Terminal tidak terdaftar untuk Device ini.');
-      }
-
-      if(access_type === 'TRM' && web_status === 'INACTIVE') {
-        await performTerminalRegistration(data.kd_user, data.access_type, true);
+      if(data.access_type === 'TRM' && data.web_status === 'INACTIVE') {
+        if (!(await performTerminalRegistration(data.kd_user, data.access_type, true))) return;
       }
 
       navigate('/');
@@ -153,7 +159,10 @@ export function LoginPage() {
       });
 
       if(access_type === 'TRM') {
-        await performTerminalRegistration(kdUser, access_type, true);
+        // login() drops the session data of a status 3 user, but key registration reads kd_user from it
+        localStorage.setItem('qris-web-merchant-data', JSON.stringify(userData));
+
+        if (!(await performTerminalRegistration(kdUser, access_type, true))) return;
         navigate('/terminal/outlet');
         return;
       }
@@ -187,7 +196,7 @@ export function LoginPage() {
       let kdUser;
 
       if (sessionData) {
-        kdUser = JSON.parse(sessionData).kd_user;
+        kdUser = sessionData.kd_user;
       } else {
         // If session data is missing, try to find kdUser from stored keys
         const storedKeys = await CryptoService.getKeys();
@@ -246,6 +255,9 @@ export function LoginPage() {
         case 'CHALLENGE_EXPIRED':
           setInvalidMessage('Sesi Kadaluarsa. Silahkan login kembali.');
           break;
+        case 'PASSWORD_RESET_REQUIRED':
+          setInvalidMessage('Password telah di reset. Silahkan login menggunakan password dari email.');
+          break;
         default:
           setInvalidMessage(e?.message || 'Verifikasi Terminal Gagal');
           break;
@@ -302,7 +314,7 @@ export function LoginPage() {
             throw new Error(verifyRes.error);
           }
 
-          return; // Success
+          return true;
         }
 
         if(kdUser !== devOwner) {
@@ -320,6 +332,7 @@ export function LoginPage() {
 
         // 4. Verify Signature with Backend
         await AuthService.verifySignature(signature);
+        return true;
       } catch (e) {
         AuthService.removeSession();
         setShowAccessTypeSelection(false);
@@ -338,6 +351,7 @@ export function LoginPage() {
             setInvalidMessage(e?.message || 'Verifikasi Terminal Gagal');
             break;
         }
+        return false;
       } finally {
         setIsVerifying(false);
       }
