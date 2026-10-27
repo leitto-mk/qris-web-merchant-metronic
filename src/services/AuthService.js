@@ -45,6 +45,16 @@ const AuthService = {
     }
   },
 
+  //Doesn't use AxiosInstance. Returns the reset PIN expiry, or null when there's no pending reset
+  async checkReset(username) {
+    try {
+      const response = await axios.post(API + '/login/check', { username });
+      return response.data.data.expired_at;
+    } catch {
+      return null;
+    }
+  },
+
   async confirmReset(kdUser, formData) {
     try {
       const response = await axiosInstance().post('/user/reset', {

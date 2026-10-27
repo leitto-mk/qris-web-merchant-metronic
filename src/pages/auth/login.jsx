@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeClosed, Key, LoaderCircleIcon, Monitor, User } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import AuthService from '@/services/AuthService';
 import CryptoService from '@/services/CryptoService';
 import { Button } from '@/components/ui/button.jsx';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp.jsx';
 
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [reset, setReset] = useState(false);
   const [onShow, setOnShow] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -20,6 +22,16 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showAccessTypeSelection, setShowAccessTypeSelection] = useState(false);
+  // Set when the username has a pending password reset: the password field becomes the emailed 6-digit PIN
+  const [pinExpiredAt, setPinExpiredAt] = useState(location.state?.expiredAt ?? null);
+  const [now, setNow] = useState(Date.now());
+  const pinSecondsLeft = pinExpiredAt ? Math.max(0, Math.ceil((Date.parse(pinExpiredAt) - now) / 1000)) : 0;
+
+  useEffect(() => {
+    if (!pinExpiredAt) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [pinExpiredAt]);
 
   // Set the browser tab title and check for existing keys
   useEffect(() => {
@@ -33,7 +45,8 @@ export function LoginPage() {
       }
     };
 
-    if (!reset) {
+    // Coming from a self reset: go straight to the PIN form
+    if (!reset && !location.state?.username) {
       checkAccessType();
     }
   }, [reset]);
@@ -74,6 +87,15 @@ export function LoginPage() {
     mode: 'onChange',
   });
 
+  useEffect(() => {
+    if (location.state?.username) form.setValue('username', location.state.username);
+  }, []);
+
+  const checkPendingReset = async (username) => {
+    form.setValue('password', '');
+    setPinExpiredAt(username ? await AuthService.checkReset(username) : null);
+  };
+
   const handleLogin = async (values) => {
     setInvalid(false);
     setLoading(true);
@@ -88,6 +110,7 @@ export function LoginPage() {
       });
 
       if(data.status === 3) {
+        setPinExpiredAt(null);
         setUserData(data);
         setReset(true);
         return;
@@ -110,6 +133,7 @@ export function LoginPage() {
       setInvalidMessage(e?.message || 'Login failed');
       setShowAccessTypeSelection(false);
       AuthService.removeSession();
+      if (pinExpiredAt) form.setValue('password', '');
     } finally {
       setLoading(false);
       setIsVerifying(false);
@@ -408,9 +432,41 @@ export function LoginPage() {
                         disabled={loading}
                         type="text"
                         placeholder="USERNAME"
-                        {...form.register('username')}
+                        {...form.register('username', {
+                          onBlur: (e) => checkPendingReset(e.target.value.trim()),
+                        })}
                       />
                     </InputWrapper>
+                    {pinExpiredAt ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-gray-400 text-sm">Masukan PIN yang dikirim ke email</span>
+                        <InputOTP
+                          maxLength={6}
+                          pattern="^[0-9]*$"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          disabled={loading || pinSecondsLeft === 0}
+                          value={form.watch('password')}
+                          onChange={(value) => form.setValue('password', value, { shouldValidate: true })}
+                          aria-label="PIN"
+                        >
+                          <InputOTPGroup className="gap-2">
+                            {[0, 1, 2, 3, 4, 5].map((i) => (
+                              <InputOTPSlot
+                                key={i}
+                                index={i}
+                                className="size-12 rounded-lg border text-white text-xl font-semibold"
+                              />
+                            ))}
+                          </InputOTPGroup>
+                        </InputOTP>
+                        <span className={pinSecondsLeft > 60 ? 'text-gray-400 text-sm' : 'text-red-500 text-sm'}>
+                          {pinSecondsLeft > 0
+                            ? `PIN berlaku ${String(Math.floor(pinSecondsLeft / 60)).padStart(2, '0')}:${String(pinSecondsLeft % 60).padStart(2, '0')}`
+                            : 'PIN telah kadaluarsa, silahkan melakukan reset password kembali'}
+                        </span>
+                      </div>
+                    ) : (
                     <InputWrapper className="h-11 border-xl">
                       <Key />
                       <Input
@@ -427,8 +483,9 @@ export function LoginPage() {
                         {onShow ? <EyeClosed /> : <Eye />}
                       </div>
                     </InputWrapper>
+                    )}
                     <Button
-                      disabled={loading}
+                      disabled={loading || (pinExpiredAt && (pinSecondsLeft === 0 || form.watch('password').length < 6))}
                       type="submit"
                       severity="success"
                       className="w-full transition-colors bg-lime-600 hover:bg-lime-500 text-white rounded-lg mt-2"

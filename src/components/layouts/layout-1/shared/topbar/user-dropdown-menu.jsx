@@ -87,10 +87,15 @@ export function UserDropdownMenu({ trigger }) {
   const handleResetPassword = async () => {
     try {
       setResetLoading(true);
-      await axiosInstance().post('/merchant/reset/password', {
-        kdUser: AuthService.retrieveSession().kd_user,
+      const kdUser = AuthService.retrieveSession().kd_user;
+      const response = await axiosInstance().post('/merchant/reset/password', {
+        kdUser,
         email: selectedEmail || undefined,
       });
+
+      // Log out and let the user log back in with the emailed PIN before it expires
+      await AuthService.logout();
+      navigate('/login', { replace: true, state: { username: kdUser, expiredAt: response.data.data.expired_at } });
     } catch (error) {
       console.log(error);
     } finally {
