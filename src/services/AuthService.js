@@ -1,5 +1,4 @@
 import axios from 'axios';
-import moment from 'moment';
 import { toast } from 'sonner';
 import { API_URL, APP_ENV } from '@/config/runtime';
 import axiosInstance from '@/services/AxiosInstance';
@@ -171,19 +170,9 @@ const AuthService = {
     localStorage.setItem('qris-web-merchant-data', JSON.stringify(data));
   },
 
+  // Expiry is the server's: its idle timeout slides with every request, and a 401 sends the user back to /login
   isSessionValid() {
-    const sessionData = localStorage.getItem('qris-web-merchant-data');
-    if (!sessionData) {
-      return false;
-    }
-
-    const expire_in = JSON.parse(sessionData).expire_in;
-    if (moment().isSameOrAfter(moment.unix(expire_in))) {
-      this.removeSession();
-      return false;
-    }
-
-    return true;
+    return localStorage.getItem('qris-web-merchant-data') !== null;
   },
 
   retrieveSession() {
