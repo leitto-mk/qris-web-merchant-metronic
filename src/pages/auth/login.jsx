@@ -255,6 +255,10 @@ export function LoginPage() {
         case 'CHALLENGE_EXPIRED':
           setInvalidMessage('Sesi Kadaluarsa. Silahkan login kembali.');
           break;
+        case 'KEY_EXPIRED':
+          await CryptoService.clearKeys();
+          setInvalidMessage('Masa berlaku Device Terminal telah habis. Silahkan login menggunakan password untuk mendaftarkan ulang.');
+          break;
         case 'PASSWORD_RESET_REQUIRED':
           setInvalidMessage('Password telah di reset. Silahkan login menggunakan password dari email.');
           break;
