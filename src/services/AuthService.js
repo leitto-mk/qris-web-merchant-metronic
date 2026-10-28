@@ -70,12 +70,13 @@ const AuthService = {
     }
   },
 
-  async registerPublicKey(publicKey) {
+  async registerPublicKey(publicKey, password) {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
       const response = await axiosInstance().post('/user/register-web-key', {
         kdUser: data.kd_user,
-        public_key: publicKey
+        public_key: publicKey,
+        password: password
       });
       return response.data;
     } catch (error) {

@@ -130,7 +130,7 @@ export function LoginPage() {
       }
 
       if(data.access_type === 'TRM' && data.web_status === 'INACTIVE') {
-        if (!(await performTerminalRegistration(data.kd_user, data.access_type, true))) return;
+        if (!(await performTerminalRegistration(data.kd_user, data.access_type, true, values.password))) return;
       }
 
       navigate('/');
@@ -162,7 +162,7 @@ export function LoginPage() {
         // login() drops the session data of a status 3 user, but key registration reads kd_user from it
         localStorage.setItem('qris-web-merchant-data', JSON.stringify(userData));
 
-        if (!(await performTerminalRegistration(kdUser, access_type, true))) return;
+        if (!(await performTerminalRegistration(kdUser, access_type, true, values.new_password))) return;
         navigate('/terminal/outlet');
         return;
       }
@@ -268,13 +268,14 @@ export function LoginPage() {
     }
   };
 
-  const performKeyPairFlow = async (userKd) => {
+  // password: the backend only registers a key against the user's current password
+  const performKeyPairFlow = async (userKd, password) => {
     const generated = await CryptoService.generateKeyPair();
     const publicKey = generated.publicKey;
     const privateKey = generated.privateKey;
 
     // 1. Submit Public Key to Backend
-    await AuthService.registerPublicKey(publicKey);
+    await AuthService.registerPublicKey(publicKey, password);
 
     // Save to IndexedDB
     await CryptoService.saveKeys(userKd, privateKey);
@@ -293,7 +294,7 @@ export function LoginPage() {
     return { verifyRes, privateKey };
   };
 
-  const performTerminalRegistration = async (kdUser, access_type, should_regenerate) => {
+  const performTerminalRegistration = async (kdUser, access_type, should_regenerate, password) => {
       try {
         setIsVerifying(true);
 
@@ -303,7 +304,7 @@ export function LoginPage() {
 
         // 1. Generate the Keys
         if (!keys || should_regenerate) {
-          const { verifyRes } = await performKeyPairFlow(kdUser);
+          const { verifyRes } = await performKeyPairFlow(kdUser, password);
           if (verifyRes.error === 'CHALLENGE_EXPIRED') {
             AuthService.removeSession();
             setShowAccessTypeSelection(true);
