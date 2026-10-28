@@ -105,8 +105,8 @@ const AuthService = {
     }
   },
 
-  //Doesn't use AxiosInstance
-  async verifySignature(signature) {
+  //Doesn't use AxiosInstance. challenge is the one that was signed; the backend only accepts challenges it issued, once
+  async verifySignature(signature, challenge) {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
       const response = await axios({
@@ -117,6 +117,7 @@ const AuthService = {
         method: 'POST',
         data: {
           kdUser: data.kd_user,
+          challenge: challenge,
           signature: signature
         }
       });

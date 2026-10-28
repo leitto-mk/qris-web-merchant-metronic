@@ -236,7 +236,7 @@ export function LoginPage() {
       );
 
       // 4. Verify Signature with Backend
-      await AuthService.verifySignature(signature);
+      await AuthService.verifySignature(signature, challenge);
 
       navigate('/terminal/outlet');
     } catch (e) {
@@ -289,7 +289,7 @@ export function LoginPage() {
     );
 
     // 4. Verify Signature with Backend
-    const verifyRes = await AuthService.verifySignature(newSignature);
+    const verifyRes = await AuthService.verifySignature(newSignature, newChallenge);
     return { verifyRes, privateKey };
   };
 
@@ -331,7 +331,7 @@ export function LoginPage() {
         );
 
         // 4. Verify Signature with Backend
-        await AuthService.verifySignature(signature);
+        await AuthService.verifySignature(signature, challenge);
         return true;
       } catch (e) {
         AuthService.removeSession();
