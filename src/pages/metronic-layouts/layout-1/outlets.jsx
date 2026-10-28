@@ -23,6 +23,31 @@ import { Skeleton } from '@/components/ui/skeleton.jsx';
 import { Stepper, StepperContent, StepperIndicator, StepperItem, StepperNav, StepperPanel, StepperSeparator, StepperTitle, StepperTrigger } from '@/components/ui/stepper.jsx';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+// The admin's own password; the backend re-checks it on terminal actions
+function PasswordField({ value, onChange, disabled }) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <Label>Password</Label>
+      <InputWrapper className="h-11 border-xl w-1/2">
+        <Key />
+        <Input
+          className="font-semibold ml-1"
+          type={show ? 'text' : 'password'}
+          placeholder="Password"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+        />
+        <div className="hover:cursor-pointer" onClick={() => setShow(!show)}>
+          {show ? <EyeClosed /> : <Eye />}
+        </div>
+      </InputWrapper>
+    </div>
+  );
+}
+
 function InfoRow({ label, value, className = '', children }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-3 py-2 border-b border-dashed last:border-none">
@@ -378,6 +403,8 @@ const ModalContents = {
     const [sending, setSending] = useState(false);
     const [onShow, setOnShow] = useState(false);
     const [confirmPwd, setConfirmPwd] = useState('');
+    // the backend checks the password again on terminal/create, so the confirmed one is kept for it
+    const [password, setPassword] = useState('');
     const [confirmed, setConfirmed] = useState(false);
     const [sendError, setSendError] = useState(null);
 
@@ -385,6 +412,7 @@ const ModalContents = {
       try {
         setLoading(true);
         await AuthService.confirmPassword(confirmPwd);
+        setPassword(confirmPwd);
         setConfirmPwd('');
         setConfirmed(true);
       } catch (error) {
@@ -412,6 +440,7 @@ const ModalContents = {
         .post('/terminal/create', {
           kdUser: session.kd_user,
           outlet: selected.XID,
+          password,
         })
         .then(() => {
           queryClient.invalidateQueries({ queryKey: ['outlets'] });
@@ -429,7 +458,7 @@ const ModalContents = {
         .finally(() => {
           setSending(false);
         });
-    }, [selected, queryClient]);
+    }, [selected, queryClient, password]);
 
     return (
       <>
@@ -734,6 +763,7 @@ const ModalContents = {
     const [merchantUser, setMerchantUser] = useState(
       initialState?.merchantUser ?? '',
     );
+    const [password, setPassword] = useState('');
 
     const merchantUserOptions = (selected?.merchantUser ?? []).filter(
       (item) => item?.kd_user,
@@ -754,6 +784,7 @@ const ModalContents = {
         await axiosInstance().post('/terminal/reset/password', {
           kdUser: session.kd_user,
           merchant_user: merchantUser,
+          password,
         });
 
         // Close modal after successful request
@@ -766,7 +797,7 @@ const ModalContents = {
       } finally {
         setLoading(false);
       }
-    }, [merchantUser, closeModal]);
+    }, [merchantUser, closeModal, password]);
 
     return (
       <div className="flex flex-col gap-5">
@@ -796,6 +827,7 @@ const ModalContents = {
               </SelectContent>
             </Select>
           </div>
+          <PasswordField value={password} onChange={setPassword} disabled={loading} />
         </div>
 
         <div className="flex flex-row justify-between">
@@ -804,7 +836,7 @@ const ModalContents = {
           </DialogClose>
           <Button
             onClick={resetPasswordTerminal}
-            disabled={loading || !merchantUser}
+            disabled={loading || !merchantUser || !password}
           >
             {loading ? (
               <LoaderCircleIcon className="size-4 animate-spin" />
@@ -823,6 +855,7 @@ const ModalContents = {
       initialState?.XID ?? '',
     );
     const [resetType, setResetType] = useState(initialState?.resetType ?? 'MOB');
+    const [password, setPassword] = useState('');
     const [showForm, setShowForm] = useState(false);
 
     const merchantUsersByKdUser = new Map(
@@ -859,6 +892,7 @@ const ModalContents = {
           kdUser: session.kd_user,
           XID: resetDeviceXID,
           type: resetType,
+          password,
         });
 
         queryClient.invalidateQueries({ queryKey: ['outlets'] });
@@ -873,7 +907,7 @@ const ModalContents = {
       } finally {
         setLoading(false);
       }
-    }, [resetDeviceXID, closeModal, resetType, queryClient]);
+    }, [resetDeviceXID, closeModal, resetType, queryClient, password]);
 
     return (
       <div className="flex flex-col gap-5">
@@ -980,6 +1014,8 @@ const ModalContents = {
                   </div>
                 </RadioGroup>
               </div>
+
+              <PasswordField value={password} onChange={setPassword} disabled={loading} />
             </div>
             <div className="flex flex-row justify-between mt-4">
               <DialogClose asChild>
@@ -987,7 +1023,7 @@ const ModalContents = {
               </DialogClose>
               <Button
                 onClick={resetDeviceTerminal}
-                disabled={loading || !resetDeviceXID}
+                disabled={loading || !resetDeviceXID || !password}
               >
                 {loading ? (
                   <LoaderCircleIcon className="size-4 animate-spin" />

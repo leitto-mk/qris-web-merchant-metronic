@@ -8,6 +8,7 @@ import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input.jsx';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
@@ -39,6 +40,8 @@ export function UserDropdownMenu({ trigger }) {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  // the backend only resets the password after checking the current one
+  const [resetPwd, setResetPwd] = useState('');
   const shouldShowSelect = useMemo(() => Array.isArray(outlets) && outlets.length > 1, [outlets]);
 
   // Build a unique (case-insensitive) list of valid outlet emails.
@@ -91,6 +94,7 @@ export function UserDropdownMenu({ trigger }) {
       const response = await axiosInstance().post('/merchant/reset/password', {
         kdUser,
         email: selectedEmail || undefined,
+        password: resetPwd,
       });
 
       // Log out and let the user log back in with the emailed PIN before it expires
@@ -99,6 +103,7 @@ export function UserDropdownMenu({ trigger }) {
     } catch (error) {
       console.log(error);
     } finally {
+      setResetPwd('');
       setResetLoading(false);
     }
   }
@@ -306,6 +311,13 @@ export function UserDropdownMenu({ trigger }) {
               Permintaan reset akan dikirim ke <span className="font-bold">{outletEmails[0]}</span>
             </div>
           )}
+          <Input
+            type="password"
+            placeholder="Password saat ini"
+            value={resetPwd}
+            onChange={(e) => setResetPwd(e.target.value)}
+            disabled={resetLoading}
+          />
           <AlertDialogFooter>
             <AlertDialogCancel disabled={resetLoading}>Batal</AlertDialogCancel>
             <AlertDialogAction
@@ -313,7 +325,7 @@ export function UserDropdownMenu({ trigger }) {
                 await handleResetPassword();
                 setConfirmResetOpen(false);
               }}
-              disabled={resetLoading || (shouldShowSelect && !selectedEmail)}
+              disabled={resetLoading || !resetPwd || (shouldShowSelect && !selectedEmail)}
             >
               {resetLoading ? 'Memproses...' : 'Reset'}
             </AlertDialogAction>

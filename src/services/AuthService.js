@@ -193,7 +193,6 @@ const AuthService = {
 
   removeSession() {
     localStorage.removeItem('qris-web-merchant-data');
-    localStorage.removeItem('qris-web-merchant-signature');
     if (ENV !== 'production') {
       localStorage.removeItem('qris-web-merchant-token');
     }

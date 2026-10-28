@@ -117,21 +117,6 @@ const axiosInstance = () => {
   });
 
   /**
-   * Intercepts Request to add signature to body if applicable
-   */
-  instance.interceptors.request.use((config) => {
-      const signature = localStorage.getItem('qris-web-merchant-signature');
-      if (signature && ['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase())) {
-          if (config.data && typeof config.data === 'object') {
-              config.data.signature = signature;
-          } else if (!config.data) {
-              config.data = { signature };
-          }
-      }
-      return config;
-  });
-
-  /**
    * Intercepts Response Code to force session be removed and redirected to /login
    * when the received code is either 401 or 403
    */
