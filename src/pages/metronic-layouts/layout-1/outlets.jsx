@@ -327,9 +327,9 @@ function buildExpandedDetails(merchant, data, openModal) {
                             <div className="flex flex-row items-center justify-between mt-1">
                               <Badge
                                 variant={
-                                  terminal.webLabel === 'INACTIVE'
-                                    ? 'secondary'
-                                    : 'success'
+                                  terminal.webLabel === 'ACTIVE'
+                                    ? 'success'
+                                    : 'secondary'
                                 }
                                 className="max-w-full"
                               >
