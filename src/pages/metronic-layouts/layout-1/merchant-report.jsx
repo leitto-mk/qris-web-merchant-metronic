@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
-import { CheckCircle2, ChevronDown, Download, Printer } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Download, Landmark, Printer } from 'lucide-react';
 import moment from 'moment';
 import { useTheme } from 'next-themes';
 import * as Recharts from 'recharts';
@@ -15,6 +15,130 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { Input } from '@/components/ui/input.jsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip.jsx';
 
+// Issuer name (uppercased, as inst_qris.name spells it) → logo file in /media/banks.
+// Logos are from Wikimedia Commons; issuers without one fall back to initials.
+const BANK_LOGO_FILES = {
+  'BANK BCA': ['bca.svg', 3.19],
+  'BANK DIGITAL BCA': ['bca-digital.svg', 6.19],
+  'BANK BCA SYARIAH': ['bca-syariah.svg', 5.83],
+  'BANK BRI': ['bri.svg', 1.0],
+  'BRIS PAY': ['bri-syariah.svg', 4.27],
+  'BANK RAYA': ['raya.svg', 1.84],
+  'BANK BNI': ['bni.svg', 3.45],
+  'MANDIRI PAY': ['livin.svg', 1.74],
+  'MANDIRI TASPEN': ['mandiri-taspen.svg', 1.88],
+  'BANK SYARIAH INDONESIA': ['bsi.svg', 3.59],
+  'BANK BTN': ['btn.svg', 6.36],
+  'BANK DANAMON': ['danamon.svg', 2.61],
+  'BANK PERMATA': ['permata.svg', 4.05],
+  'CIMB NIAGA': ['cimb.svg', 6.53],
+  'OCBC NISP': ['ocbc.svg', 3.71],
+  'BANK OCBC NISP': ['ocbc.svg', 3.71],
+  MAYBANK: ['maybank.png', 3.46],
+  'BANK PANIN': ['panin.svg', 8.06],
+  'BANK PANIN DUBAY SYARIAH': ['panin-syariah.png', 5.33],
+  'BANK UOB': ['uob.svg', 3.57],
+  CCBI: ['ccbi.png', 9.48],
+  'BANK ARTHA GRAHA INTERNASIONAL': ['artha-graha.png', 5.12],
+  'BANK CAPITAL INDONESIA TBK': ['capital.png', 9.48],
+  'BANK BUMI ARTA': ['bumi-arta.svg', 7.55],
+  'BANK JTRUST': ['jtrust.svg', 6.51],
+  'BANK MUAMALAT': ['muamalat.png', 3.56],
+  'BANK SHINHAN': ['shinhan.svg', 5.93],
+  'BANK SINARMAS': ['sinarmas.png', 4.2],
+  'BANK GANESHA': ['ganesha.png', 10.24],
+  'BANK QNB INDONESIA': ['qnb.svg', 3.43],
+  'BANK WOORI SAUDARA': ['woori.png', 3.06],
+  'BANK MEGA': ['mega.svg', 1.71],
+  'BANK MEGA SYARIAH': ['mega-syariah.png', 1.34],
+  'BANK KB BUKOPIN': ['kb-bukopin.svg', 6.84],
+  'BANK KB BUKOPIN SYARIAH': ['kb-bukopin-syariah.png', 3.37],
+  'BANK KEB HANA': ['hana.svg', 4.57],
+  'BANK INA PERDANA': ['ina.png', 4.2],
+  'BANK AMAR INDONESIA': ['amar.png', 1.96],
+  'BANK BTPN SYARIAH': ['btpn-syariah.png', 1.77],
+  'BANK MAYORA': ['hibank.svg', 2.0], // Bank Mayora now trades as hibank
+  'BANK INDEX SELINDO': ['index.png', 5.57],
+  'BANK VICTORIA': ['victoria.png', 7.31],
+  'BANK ALADIN SYARIAH': ['aladin.png', 2.37],
+  'BANK JAGO': ['jago.svg', 2.37],
+  'BANK NEO COMMERCE': ['neo.png', 2.17],
+  SEABANK: ['seabank.svg', 3.11],
+  SUPERBANK: ['superbank.svg', 6.33],
+  'ALLO BANK INDONESIA': ['allo.svg', 4.66],
+  'KROM BANK': ['krom.png', 3.71],
+  // Regional development banks
+  'BANK DKI': ['dki.svg', 6.28],
+  'BANK JATIM': ['jatim.svg', 2.0],
+  'BPD JAMBI': ['jambi.png', 3.56],
+  'BANK ACEH SYARIAH': ['aceh-syariah.png', 4.49],
+  'BANK NAGARI': ['nagari.svg', 2.96],
+  'BANK RIAU KEPRI': ['riau-kepri.png', 2.29],
+  'BANK LAMPUNG': ['lampung.png', 3.51],
+  'BANK KALSEL': ['kalsel.png', 3.29],
+  'BANK KALBAR': ['kalbar.png', 4.57],
+  'BANK KALTIMTARA': ['kaltimtara.png', 2.0],
+  'BANK SULSELBAR': ['sulselbar.png', 1.85],
+  'BANK NTT': ['ntt.png', 1.67],
+  'BPD MALUKU & MALUKU UTARA': ['maluku.png', 4.02],
+  'BANK PAPUA': ['papua.png', 4.88],
+  'BPD SULTRA': ['sultra.png', 4.0],
+  'BJB SYARIAH': ['bjb-syariah.png', 1.37],
+  // E-wallets
+  GOPAY: ['gopay.svg', 4.29],
+  OVO: ['ovo.svg', 3.21],
+  DANA: ['dana.svg', 3.5],
+  SHOPEEPAY: ['shopee.svg', 0.7],
+  LINKAJA: ['linkaja.svg', 1.0],
+  TRUEMONEY: ['truemoney.png', 2.13],
+  PAYTREN: ['paytren.png', 3.37],
+  // Short names used by the mock data
+  BCA: ['bca.svg', 3.19],
+  BRI: ['bri.svg', 1.0],
+  BNI: ['bni.svg', 3.45],
+  MANDIRI: ['mandiri.svg', 3.43],
+  DANAMON: ['danamon.svg', 2.61],
+  PERMATA: ['permata.svg', 4.05],
+};
+
+// name → { src, ratio }, ratio being the file's width / height
+const BANK_LOGOS = {
+  ...Object.fromEntries(
+    Object.entries(BANK_LOGO_FILES).map(([name, [file, ratio]]) => [name, { src: `/media/banks/${file}`, ratio }])
+  ),
+  // BSG: inst_qris has no row for NNS 93600127, so the API sends the raw code (or BANK SULUTGO if a row is added)
+  '93600127': { src: '/media/bsg/icon.png', ratio: 1 },
+  'BANK SULUTGO': { src: '/media/bsg/icon.png', ratio: 1 },
+  BSG: { src: '/media/bsg/icon.png', ratio: 1 },
+};
+
+// Logos are sized to the same area so wide wordmarks and square marks look equally heavy,
+// then shrunk to fit the 72×32 space inside the tile.
+const LOGO_AREA = 1000;
+const LOGO_MAX_W = 72;
+const LOGO_MAX_H = 32;
+const logoSize = (ratio) => {
+  const h = Math.sqrt(LOGO_AREA / ratio);
+  const scale = Math.min(1, LOGO_MAX_W / (h * ratio), LOGO_MAX_H / h);
+  return { width: h * ratio * scale, height: h * scale };
+};
+
+const initialsOf = (name) =>
+  String(name).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+
+// Logo if we have one and it loads; otherwise initials, or a generic bank icon when the
+// name has no letters (a raw NNS like 93600123 that inst_qris couldn't resolve).
+function IssuerLogo({ name }) {
+  const [failed, setFailed] = useState(false);
+  const logo = BANK_LOGOS[String(name).toUpperCase()];
+  if (logo && !failed) {
+    return (
+      <img src={logo.src} alt="" style={logoSize(logo.ratio)} className="object-contain" onError={() => setFailed(true)} />
+    );
+  }
+  if (!/[a-z]/i.test(name)) return <Landmark className="size-5" />;
+  return initialsOf(name);
+}
 
 /**
  * Layout 1 Merchant Report Page Component
@@ -56,7 +180,7 @@ export function MerchantReportPage() {
         variant="ghost"
         size="icon"
         className="size-8"
-        onClick={() => toggleCollapse(key)}
+        // no onClick: the click bubbles to the card header, which does the toggle
         aria-expanded={!collapsed[key]}
         aria-label={collapsed[key] ? 'Expand' : 'Collapse'}
       >
@@ -195,7 +319,8 @@ if (key === '30d')
       .sort((a, b) => new Date(b.timestamprq) - new Date(a.timestamprq))
       .filter((item) => {
         // Date filter
-        if (filters.timestamprq && !new Date(item.timestamprq).toLocaleString('id-ID').toLowerCase().includes(filters.timestamprq.toLowerCase())) {
+        // match against the same text the table shows
+        if (filters.timestamprq && !moment(item.timestamprq).format('DD MMM YYYY HH:mm:ss').toLowerCase().includes(filters.timestamprq.toLowerCase())) {
           return false;
         }
 
@@ -269,30 +394,19 @@ if (key === '30d')
     const totalAmount = data.reduce((prev, cur) => prev + Number(cur.amount || 0), 0);
     const count = data.length;
     const avg = count ? totalAmount / count : 0;
-    const byIssuer = data.reduce((prev, cur) => {
-      const key = cur.issuer || '-';
-      prev[key] = (prev[key] || 0) + 1;
-      return prev;
-    }, {});
-    const byTerminal = data.reduce((prev, cur) => {
-      const key = cur.terminal || '-';
-      prev[key] = (prev[key] || 0) + 1;
-      return prev;
-    }, {});
-    const byOutlet = data.reduce((prev, cur) => {
-      const key = cur.outlet || '-';
-      prev[key] ??= { amount: 0, count: 0 };
-      prev[key].amount += Number(cur.amount || 0);
-      prev[key].count += 1;
-      return prev;
-    }, {});
-    return { totalAmount, count, avg, byIssuer, byTerminal, byOutlet };
+    // field value → { amount, count }, largest amount first
+    const groupBy = (field) =>
+      Object.entries(
+        data.reduce((prev, cur) => {
+          const key = cur[field] || '-';
+          prev[key] ??= { amount: 0, count: 0 };
+          prev[key].amount += Number(cur.amount || 0);
+          prev[key].count += 1;
+          return prev;
+        }, {})
+      ).sort((a, b) => b[1].amount - a[1].amount);
+    return { totalAmount, count, avg, byIssuer: groupBy('issuer'), byOutlet: groupBy('outlet') };
   }, [history, filteredHistory, isFiltered]);
-
-  const outletCards = useMemo(
-    () => Object.entries(totals.byOutlet || {}).sort((a, b) => b[1].amount - a[1].amount),
-    [totals.byOutlet]
-  );
 
   // Simple daily bucket for the chart (local time)
   const chartData = useMemo(() => {
@@ -310,8 +424,6 @@ if (key === '30d')
       .map(([date, amount]) => ({ date, amount }))
       .sort((a, b) => (a.date < b.date ? -1 : 1));
   }, [history, filteredHistory, isFiltered]);
-
-  const issuerChips = useMemo(() => Object.entries(totals.byIssuer || {}), [totals.byIssuer]);
 
   const isMockEnabled = () => {
     return window.APP_ENV === 'development';
@@ -358,13 +470,10 @@ if (key === '30d')
       // otherwise fallback to data if the API ever returns a direct array.
       const transactionsArray = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
 
-      //Map Value
-      transactionsArray.map((tx) => ({
+      setHistory(transactionsArray.map((tx) => ({
         ...tx,
         issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
-      }));
-
-      setHistory(transactionsArray);
+      })));
     } catch (error) {
       console.error('Gagal mengambil riwayat transaksi:', error?.response?.data?.errors ?? error);
       setError('Gagal mengambil data. Coba lagi.');
@@ -559,29 +668,50 @@ if (key === '30d')
         </Card>
       </div>
 
-      {/* Per-outlet breakdown */}
-      {outletCards.length > 0 && (
-        <Card variant="accent">
-          <CardHeader className="py-3.5">
-            <CardTitle>Rincian per Outlet</CardTitle>
-            {collapseButton('outlet')}
+      {/* Per-outlet and per-issuer breakdowns */}
+      {[
+        { key: 'outlet', title: 'Rincian per Outlet', rows: totals.byOutlet },
+        { key: 'issuer', title: 'Issuer', rows: totals.byIssuer, withLogo: true },
+      ].map(({ key, title, rows, withLogo }) => rows.length > 0 && (
+        <Card key={key} variant="accent">
+          <CardHeader className="py-3.5 cursor-pointer select-none" onClick={() => toggleCollapse(key)}>
+            <CardTitle>{title}</CardTitle>
+            {collapseButton(key)}
           </CardHeader>
-          {!collapsed.outlet && (
+          {!collapsed[key] && (
           <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {outletCards.map(([name, { amount, count }]) => {
+            {rows.map(([name, { amount, count }]) => {
               const pct = totals.totalAmount ? (amount / totals.totalAmount) * 100 : 0;
               return (
                 <div key={name} className="rounded-lg border p-4 flex flex-col gap-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-foreground/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
-                  <div className="text-sm font-medium uppercase truncate" title={name}>
-                    {name}
+                  <div className="flex items-center gap-3 min-w-0">
+                    {withLogo && (
+                      // white backing keeps multi-colour logos readable in dark mode
+                      <span className="flex shrink-0 items-center justify-center h-10 w-20 rounded-md border bg-white p-0.5 text-xs font-bold text-slate-700">
+                        <IssuerLogo name={name} />
+                      </span>
+                    )}
+                    <span className="text-sm font-medium uppercase truncate" title={name}>
+                      {name}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-base font-semibold">{formatIDR(amount)}</span>
                     <Badge variant="secondary">{count} trx</Badge>
                   </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-sky-400" style={{ width: `${pct}%` }} />
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {/* py-1 widens the hover target around the thin bar */}
+                      <div className="py-1 -my-1 cursor-default">
+                        <div className="h-1 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full bg-sky-400" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{name}: {pct.toFixed(1)}%</p>
+                    </TooltipContent>
+                  </Tooltip>
                   <div className="text-xs text-muted-foreground">
                     {pct.toFixed(1)}% dari total
                   </div>
@@ -591,26 +721,7 @@ if (key === '30d')
           </CardContent>
           )}
         </Card>
-      )}
-
-      {/* Issuer chips */}
-      {issuerChips.length > 0 && (
-        <Card variant="accent">
-          <CardHeader className="py-3.5">
-            <CardTitle>Perangkat</CardTitle>
-            {collapseButton('issuer')}
-          </CardHeader>
-          {!collapsed.issuer && (
-          <CardContent className="flex flex-wrap gap-2">
-            {issuerChips.map(([name, cnt]) => (
-              <Badge key={name} variant="secondary">
-                {name}: {cnt}
-              </Badge>
-            ))}
-          </CardContent>
-          )}
-        </Card>
-      )}
+      ))}
 
       {/* Chart */}
       {history.length > 1 && selectedPreset !== 'today' && (
@@ -684,19 +795,18 @@ if (key === '30d')
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left border-b border-dashed">
-                    <th className="py-2 pr-4 text-center">Action</th>
                     <th className="py-2 pr-4">Tanggal</th>
-                    <th className="py-2 pr-4 text-right">Amount</th>
+                    <th className="py-2 pr-4">From Name</th>
                     <th className="py-2 pr-4">Issuer</th>
                     <th className="py-2 pr-4">Outlet</th>
                     <th className="py-2 pr-4">Terminal</th>
                     <th className="py-2 pr-4">RRN</th>
-                    <th className="py-2 pr-4">From Name</th>
                     <th className="py-2 pr-4">From Acc</th>
                     <th className="py-2 pr-4">To Acc</th>
+                    <th className="py-2 pr-4 text-right">Amount</th>
+                    <th className="py-2 pr-4 text-center">Action</th>
                   </tr>
                   <tr className="text-left">
-                    <td className="py-2 pr-4"></td>
                     <td className="py-2 pr-4">
                       <Input
                         placeholder="Filter..."
@@ -708,32 +818,14 @@ if (key === '30d')
                       />
                     </td>
                     <td className="py-2 pr-4">
-                      <div className="flex items-center gap-1">
-                        <select
-                          className="h-8 border border-input bg-background rounded-md px-2 text-xs"
-                          value={filters.amount.operator}
-                          onChange={(e) =>
-                            handleAmountFilterChange('operator', e.target.value)
-                          }
-                        >
-                          <option value="eq">=</option>
-                          <option value="gte">≥</option>
-                          <option value="lte">≤</option>
-                          <option value="gt">&gt;</option>
-                          <option value="lt">&lt;</option>
-                        </select>
-                        <Input
-                          type="text"
-                          placeholder="Value..."
-                          className="h-8"
-                          value={formatIDR(filters.amount.value)
-                            .replace('IDR', '')
-                            .trim()}
-                          onChange={(e) =>
-                            handleAmountFilterChange('value', e.target.value)
-                          }
-                        />
-                      </div>
+                      <Input
+                        placeholder="Filter..."
+                        className="h-8"
+                        value={filters.fromname}
+                        onChange={(e) =>
+                          handleFilterChange('fromname', e.target.value)
+                        }
+                      />
                     </td>
                     <td className="py-2 pr-4">
                       <select
@@ -794,16 +886,6 @@ if (key === '30d')
                       <Input
                         placeholder="Filter..."
                         className="h-8"
-                        value={filters.fromname}
-                        onChange={(e) =>
-                          handleFilterChange('fromname', e.target.value)
-                        }
-                      />
-                    </td>
-                    <td className="py-2 pr-4">
-                      <Input
-                        placeholder="Filter..."
-                        className="h-8"
                         value={filters.fromacc}
                         onChange={(e) =>
                           handleFilterChange('fromacc', e.target.value)
@@ -820,6 +902,35 @@ if (key === '30d')
                         }
                       />
                     </td>
+                    <td className="py-2 pr-4">
+                      <div className="flex items-center gap-1">
+                        <select
+                          className="h-8 border border-input bg-background rounded-md px-2 text-xs"
+                          value={filters.amount.operator}
+                          onChange={(e) =>
+                            handleAmountFilterChange('operator', e.target.value)
+                          }
+                        >
+                          <option value="eq">=</option>
+                          <option value="gte">≥</option>
+                          <option value="lte">≤</option>
+                          <option value="gt">&gt;</option>
+                          <option value="lt">&lt;</option>
+                        </select>
+                        <Input
+                          type="text"
+                          placeholder="Value..."
+                          className="h-8"
+                          value={formatIDR(filters.amount.value)
+                            .replace('IDR', '')
+                            .trim()}
+                          onChange={(e) =>
+                            handleAmountFilterChange('value', e.target.value)
+                          }
+                        />
+                      </div>
+                    </td>
+                    <td className="py-2 pr-4"></td>
                   </tr>
                 </thead>
                 <tbody>
@@ -828,6 +939,28 @@ if (key === '30d')
                       key={idx}
                       className="border-b border-dashed last:border-0"
                     >
+                      <td className="py-2 pr-4 whitespace-nowrap">
+                        {moment(row.timestamprq).format('DD MMM YYYY')}{' '}
+                        <span className="text-muted-foreground">
+                          {moment(row.timestamprq).format('HH:mm:ss')}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4">
+                        {row.fromname?.toUpperCase() ?? 'N/A'}
+                      </td>
+                      <td className="py-2 pr-4">{row.issuer?.toUpperCase()}</td>
+                      <td className="py-2 pr-4">{row.outlet}</td>
+                      <td className="py-2 pr-4">{row.terminal}</td>
+                      <td className="py-2 pr-4 font-mono">{row.rrn}</td>
+                      <td className="py-2 pr-4 font-mono">
+                        {maskAcc(row.fromacc)}
+                      </td>
+                      <td className="py-2 pr-4 font-mono">
+                        {maskAcc(row.toacc)}
+                      </td>
+                      <td className="py-2 pr-4 text-right font-mono whitespace-nowrap">
+                        {formatIDR(row.amount)}
+                      </td>
                       <td className="py-2 pr-4 text-center">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -845,42 +978,23 @@ if (key === '30d')
                           </TooltipContent>
                         </Tooltip>
                       </td>
-                      <td className="py-2 pr-4 whrowespace-nowrap">
-                        {new Date(row.timestamprq).toLocaleString('id-ID')}
-                      </td>
-                      <td className="py-2 pr-4 text-right font-mono">
-                        {formatIDR(row.amount)}
-                      </td>
-                      <td className="py-2 pr-4">{row.issuer?.toUpperCase()}</td>
-                      <td className="py-2 pr-4">{row.outlet}</td>
-                      <td className="py-2 pr-4">{row.terminal}</td>
-                      <td className="py-2 pr-4 font-mono">{row.rrn}</td>
-                      <td className="py-2 pr-4">
-                        {row.fromname.toUpperCase() ?? 'N/A'}
-                      </td>
-                      <td className="py-2 pr-4 font-mono">
-                        {maskAcc(row.fromacc)}
-                      </td>
-                      <td className="py-2 pr-4 font-mono">
-                        {maskAcc(row.toacc)}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
                 {isFiltered && (
                   <tfoot>
                     <tr className="border-t border-dashed">
-                      <td></td>
                       <td className="py-2 pr-4 font-bold">Total Filtered</td>
-                      <td className="py-2 pr-4 text-right font-mono font-bold">
-                        {formatIDR(filteredTotals.totalAmount)}
-                      </td>
                       <td
                         colSpan="7"
                         className="py-2 pr-4 text-right font-bold"
                       >
                         {filteredTotals.count} records
                       </td>
+                      <td className="py-2 pr-4 text-right font-mono font-bold whitespace-nowrap">
+                        {formatIDR(filteredTotals.totalAmount)}
+                      </td>
+                      <td></td>
                     </tr>
                   </tfoot>
                 )}
