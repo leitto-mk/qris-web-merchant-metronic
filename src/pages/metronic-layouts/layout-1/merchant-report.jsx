@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
-import { CheckCircle2, Download, Printer } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Download, Printer } from 'lucide-react';
 import moment from 'moment';
 import { useTheme } from 'next-themes';
 import * as Recharts from 'recharts';
@@ -9,7 +9,7 @@ import AuthService from '@/services/AuthService.js';
 import axiosInstance from '@/services/AxiosInstance.js';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
+import { Card, CardContent, CardHeader, CardTitle, CardToolbar } from '@/components/ui/card.jsx';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart.jsx';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.jsx';
 import { Input } from '@/components/ui/input.jsx';
@@ -47,6 +47,24 @@ export function MerchantReportPage() {
     toacc: '',
   });
 
+  const [collapsed, setCollapsed] = useState({ outlet: false, issuer: false });
+  const toggleCollapse = (key) => setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  const collapseButton = (key) => (
+    <CardToolbar>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-8"
+        onClick={() => toggleCollapse(key)}
+        aria-expanded={!collapsed[key]}
+        aria-label={collapsed[key] ? 'Expand' : 'Collapse'}
+      >
+        <ChevronDown className={`size-4 transition-transform ${collapsed[key] ? '' : 'rotate-180'}`} />
+      </Button>
+    </CardToolbar>
+  );
+
   // Receipt Modal State
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [selectedTx, setSelectedTx] = useState(null);
@@ -60,11 +78,6 @@ export function MerchantReportPage() {
   const formatDateLocal = (d) => {
     const m = moment(d);
     return m.isValid() ? m.format('YYYY-MM-DD') : '';
-  };
-
-  const formatDateTimeInput = (d) => {
-    const m = moment(d);
-    return m.isValid() ? m.format('YYYY-MM-DD HH:mm:ss') : '';
   };
 
   const isRangeExceedingOneMonth = (from, to) => {
@@ -266,8 +279,20 @@ if (key === '30d')
       prev[key] = (prev[key] || 0) + 1;
       return prev;
     }, {});
-    return { totalAmount, count, avg, byIssuer, byTerminal };
+    const byOutlet = data.reduce((prev, cur) => {
+      const key = cur.outlet || '-';
+      prev[key] ??= { amount: 0, count: 0 };
+      prev[key].amount += Number(cur.amount || 0);
+      prev[key].count += 1;
+      return prev;
+    }, {});
+    return { totalAmount, count, avg, byIssuer, byTerminal, byOutlet };
   }, [history, filteredHistory, isFiltered]);
+
+  const outletCards = useMemo(
+    () => Object.entries(totals.byOutlet || {}).sort((a, b) => b[1].amount - a[1].amount),
+    [totals.byOutlet]
+  );
 
   // Simple daily bucket for the chart (local time)
   const chartData = useMemo(() => {
@@ -413,23 +438,6 @@ if (key === '30d')
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col 2xl:flex-row gap-3 items-start 2xl:items-end">
-            {/* Stylish, read-only date range display */}
-            <div className="flex items-center gap-3">
-              <div className="rounded-md border px-3 py-2">
-                <div className="text-xs text-muted-foreground">Dari</div>
-                <div className="font-mono text-sm">
-                  {formatDateTimeInput(dateFrom)}
-                </div>
-              </div>
-              <span className="text-muted-foreground">→</span>
-              <div className="rounded-md border px-3 py-2">
-                <div className="text-xs text-muted-foreground">Sampai</div>
-                <div className="font-mono text-sm">
-                  {formatDateTimeInput(dateTo)}
-                </div>
-              </div>
-            </div>
-
             {/* Preset range buttons */}
             <div className="flex flex-wrap items-end gap-2">
               <Button
@@ -551,12 +559,48 @@ if (key === '30d')
         </Card>
       </div>
 
+      {/* Per-outlet breakdown */}
+      {outletCards.length > 0 && (
+        <Card variant="accent">
+          <CardHeader className="py-3.5">
+            <CardTitle>Rincian per Outlet</CardTitle>
+            {collapseButton('outlet')}
+          </CardHeader>
+          {!collapsed.outlet && (
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {outletCards.map(([name, { amount, count }]) => {
+              const pct = totals.totalAmount ? (amount / totals.totalAmount) * 100 : 0;
+              return (
+                <div key={name} className="rounded-lg border p-4 flex flex-col gap-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-foreground/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+                  <div className="text-sm font-medium uppercase truncate" title={name}>
+                    {name}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-base font-semibold">{formatIDR(amount)}</span>
+                    <Badge variant="secondary">{count} trx</Badge>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full bg-sky-400" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {pct.toFixed(1)}% dari total
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+          )}
+        </Card>
+      )}
+
       {/* Issuer chips */}
       {issuerChips.length > 0 && (
         <Card variant="accent">
           <CardHeader className="py-3.5">
             <CardTitle>Perangkat</CardTitle>
+            {collapseButton('issuer')}
           </CardHeader>
+          {!collapsed.issuer && (
           <CardContent className="flex flex-wrap gap-2">
             {issuerChips.map(([name, cnt]) => (
               <Badge key={name} variant="secondary">
@@ -564,6 +608,7 @@ if (key === '30d')
               </Badge>
             ))}
           </CardContent>
+          )}
         </Card>
       )}
 
