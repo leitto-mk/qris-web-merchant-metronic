@@ -1,197 +1,169 @@
-# QRIS Web Merchant (Metronic) — Project Skeleton & How-To
+<div align="center">
 
-This repository is a React 19 + Vite 7 application styled with Metronic-inspired layouts. It ships with a production-ready Docker/Nginx setup and common tooling (ESLint, Prettier, Tailwind).
+# QRIS Web Merchant · Front-End
 
-The README explains:
-- How the skeleton is structured and where to start coding
-- How to run locally, build, and preview
-- How to containerize and deploy with Nginx
-- How to work with Git (branching, committing, pushing)
+**Portal merchant QRIS Bank SulutGo: admin merchant mengelola outlet & terminal, terminal (kasir) membuat QR pembayaran.**
 
----
+![React](docs/badges/react.svg)
+![Vite](docs/badges/vite.svg)
+![Tailwind](docs/badges/tailwind.svg)
+![Docker](docs/badges/docker.svg)
 
-## 1) Prerequisites
+</div>
 
-- Node.js 18+ (Node 21 is used in the Docker build)
-- npm 9+
-- Git
-- Optional: Docker 24+ (for containerized builds and deployment)
+> Satu portal untuk dua jenis user: admin merchant melihat outlet, laporan, dan mengatur terminal; terminal menampilkan QR pembayaran ke pelanggan.
 
----
+<p align="center"><img src="docs/flow.svg" alt="Alur QRIS Web Merchant" width="100%"></p>
 
-## 2) Project Structure (high level)
+| | |
+|---|---|
+| 🏪 **Merchant & Outlet** | Data merchant, daftar outlet, dan binding terminal |
+| 📊 **Report** | Histori transaksi dengan total jumlah & nominal per outlet |
+| 🧾 **Terminal & QR** | Halaman kasir untuk generate QR dinamis, plus layar QR untuk pelanggan |
+| 🔐 **Browser Key** | Terminal terikat ke browser lewat key Web Crypto (IndexedDB) |
+| 🐳 **Satu Image untuk Semua Env** | URL backend diisi saat runtime lewat env `APP_URL` |
 
-- `src/` — app source code (components, pages, services, context)
-  - `components/` — reusable UI parts and layout components
-  - `pages/` — route-level pages (e.g., Metronic layouts and screens)
-  - `services/` — API/Axios instances and auth-related utilities
-  - `context/` — React context providers for app-wide state
-- `public/` — static assets copied as-is
-- `index.html` — Vite entry HTML
-- `vite.config.js` — Vite configuration
-- `nginx.conf` — Nginx template used in the Docker image
-- `Dockerfile` — multi-stage build and Nginx-based production image
+Back-End: [**qris-web-merchant-api**](https://gitea.dev.bsg.id/michio/qris-merchant-public-api)
 
-Where to begin in code:
-- Start from `src/` and explore `pages/` to see how screens are composed.
-- Layouts and page shells live under `src/components/layouts/` and `src/pages/metronic-layouts/`.
-- API interactions: `src/services/AxiosInstance.js` and `src/services/AuthService.js`.
-- App-wide data: `src/context/AppDataContext.jsx`.
+## 1. DEVELOPMENT REQUIREMENTS
+- [**React 19**](https://react.dev)
+- [**Vite 7**](https://vite.dev)
+- [**NodeJs**](https://nodejs.org) (image memakai Node 20)
+- [**qris-web-merchant-api**](https://gitea.dev.bsg.id/michio/qris-merchant-public-api) (Back-End)
 
----
+## 2. LOCAL INSTALLATION STEPS
+- Download repo **qris-web-merchant-metronic**
+- Buat `.env` berisi URL backend:
+    ```
+    VITE_APP_API_URL=http://localhost:30020
+    VITE_APP_ENV=local
+    ```
+- Jalankan perintah berikut untuk menginstall package pada **package.json**:
+    ```bash
+    npm install --legacy-peer-deps
+    ```
+- Jalankan perintah berikut untuk menjalankan aplikasi secara local (`http://localhost:5173`):
+    ```bash
+    npm run dev
+    ```
 
-## 3) Environment Variables
+- Jalankan perintah berikut untuk melakukan *manual build*:
+    ```bash
+    npm run build
+    ```
 
-Create and edit a `.env` file at the project root for local development. Common patterns include:
+Backend lokal dijalankan dari repo **qris-web-merchant-api** (`docker-compose.local.yaml`), yang juga menjalankan image FE ini di `http://localhost:30010`.
 
-```
-# Example keys (adjust to your backend)
-VITE_API_BASE_URL=http://localhost:3000
-VITE_APP_ENV=local
-```
-
-Usage: any variable prefixed with `VITE_` is exposed to the client and can be read via `import.meta.env.VITE_*`.
-
-Note (Docker/Nginx): the production image injects meta tags via Nginx Server Side Includes (SSI) using two environment variables:
-- `nginx_ssi_url` → becomes a `<meta name="app_url" ...>` value
-- `nginx_ssi_env` → becomes a `<meta name="app_env" ...>` value
-
-You can use these to expose deployment metadata at runtime without rebuilding.
-
----
-
-## 4) Install & Run Locally
-
-1. Install dependencies:
-   ```
-   npm install --legacy-peer-deps
-   ```
-2. Start the dev server:
-   ```
-   npm run dev
-   ```
-3. Open the app (default Vite port): http://localhost:5173
-
-Lint/format:
-```
-npm run lint
-npm run format
-```
-
----
-
-## 5) Build & Preview
-
-- Production build (outputs to `dist/`):
-  ```
-  npm run build
-  ```
-- Local static preview of the built app:
-  ```
-  npm run preview
-  ```
-
-The `dist/` folder can be served by any static web server (Nginx, Apache, S3/CloudFront, Vercel static, Netlify, etc.).
-
----
-
-## 6) Dockerized Production (Nginx)
-
-The provided `Dockerfile` builds the app and serves it with Nginx.
-
-Build the image:
-```
-docker build -t qris-web-merchant-metronic:latest .
-```
-
-Run the container:
-```
-docker run --rm -p 8080:80 \
-  -e nginx_ssi_url="https://merchant.example.com" \
-  -e nginx_ssi_env="production" \
-  qris-web-merchant-metronic:latest
-```
-
-Open http://localhost:8080.
-
-Notes:
-- The Dockerfile copies `dist/` to Nginx’s web root and enables SSI-injected meta tags for `app_url` and `app_env`.
-- You can customize Nginx via `nginx.conf` if needed.
-
----
-
-## 7) Deployment Options
-
-Option A — Static hosting:
-- Run `npm run build` and upload the contents of `dist/` to your static host.
-
-Option B — Nginx on a server/VM:
-- Copy `dist/` to `/usr/share/nginx/html` and place an appropriate Nginx site config (use `nginx.conf` as a starting point).
-
-Option C — Docker container:
-- Build and push the Docker image to your registry (e.g., GHCR, ECR):
-  ```
-  docker tag qris-web-merchant-metronic:latest YOUR_REGISTRY/qris-web-merchant-metronic:TAG
-  docker push YOUR_REGISTRY/qris-web-merchant-metronic:TAG
-  ```
-- Deploy the image to your platform (Kubernetes, ECS, Swarm, VM) and set `nginx_ssi_url`/`nginx_ssi_env` env vars as needed.
-
----
-
-## 8) Working with Git
-
-Initial setup:
-```
-git clone <REPO_URL>
-cd qris-web-merchant-metronic
-git checkout -b feature/your-feature
-```
-
-Commit and push changes:
-```
-git add .
-git commit -m "feat: describe your change"
-git push origin feature/your-feature
-```
-
-Open a Pull Request (PR) on your Git platform and request review.
-
-Update your local branch with the latest `main` changes:
-```
-git checkout main
-git pull origin main
-git checkout feature/your-feature
-git rebase main   # or: git merge main
-```
-
-Tagging a release (optional):
-```
-git tag -a v1.0.0 -m "First release"
-git push origin v1.0.0
-```
-
----
-
-## 9) Troubleshooting
-
-- Port already in use on `5173`: either stop the other process or set `--port` for Vite.
-- API calls failing: ensure `VITE_API_BASE_URL` is correct and backend is reachable.
-- Docker build issues: confirm Node can install dependencies and that the build works locally (`npm run build`).
-
----
-
-## 10) Useful Scripts
+## 3. STRUKTUR APLIKASI
+Hanya file inti aplikasi. Layout bawaan template Metronic lainnya (`pages/metronic-layouts/layout-*`, `components/layouts/layout-*`) tidak dipakai di router.
 
 ```
-npm run dev       # start local dev server
-npm run build     # production build to dist/
-npm run preview   # preview built app locally
-npm run lint      # lint (auto-fix on src/)
-npm run format    # prettier format
+qris-web-merchant-metronic/
+├── src/
+│   ├── main.jsx, App.jsx              # Bootstrap React
+│   ├── config/runtime.js              # API_URL & APP_ENV dari meta tag, fallback ke VITE_APP_*
+│   ├── routing/
+│   │   └── app-routing-setup.jsx      # Daftar route + guard session (lihat 3.1)
+│   ├── services/
+│   │   ├── AxiosInstance.js           # Axios ke `${API_URL}/api/v1/mrchadmin`, toast per endpoint
+│   │   ├── AuthService.js             # Login, logout, validasi session
+│   │   ├── CryptoService.js           # Browser key terminal (Web Crypto + IndexedDB)
+│   │   ├── QRService.js               # Render QR
+│   │   └── ImagePrintService.js       # Cetak gambar QR
+│   ├── context/AppDataContext.jsx     # Data merchant/outlet bersama
+│   ├── pages/
+│   │   ├── auth/login.jsx             # /login
+│   │   └── metronic-layouts/
+│   │       ├── layout-1/              # Admin: merchant.jsx, outlets.jsx, merchant-report.jsx
+│   │       └── layout-32/             # Terminal: terminal-page.jsx, terminal-qr-display.jsx
+│   └── components/layouts/
+│       ├── layout-1/                  # Kerangka halaman admin
+│       └── layout-32/                 # Kerangka halaman terminal
+├── index.html                         # Meta `app_url` & `app_env` disisipkan saat build image
+├── nginx.conf                         # SSI: mengisi meta dari env APP_URL & APP_ENV saat runtime
+├── Dockerfile                         # Build Vite -> image nginx
+├── changelogs.txt                     # Ditulis otomatis oleh deploy.sh
+└── deploy.sh                          # Versioning, git tag, build & push image
 ```
 
----
+**APP_URL**: URL backend tidak di-hardcode saat build. Container membaca env `APP_URL` dan `APP_ENV`, nginx (SSI) menuliskannya ke meta `app_url` / `app_env` pada `index.html`, lalu dibaca oleh `src/config/runtime.js`. Satu image bisa dipakai di semua environment.
 
-## 11) License
+### 3.1 Route
+| Route | User | Halaman |
+|-------|------|---------|
+| `/login` | Semua | Login admin & terminal |
+| `/merchant` | Admin | Data merchant |
+| `/outlet` | Admin | Daftar outlet & terminal |
+| `/report` | Admin | Histori transaksi |
+| `/terminal/outlet`, `/terminal/pembayaran` | Terminal | Generate QR pembayaran |
+| `/terminal/qr-display` | Terminal | Layar QR untuk pelanggan |
 
-Private/internal project unless stated otherwise.
+Route hanya untuk tampilan. Hak akses sebenarnya dicek di backend.
+
+## 4. DEPLOYMENT
+- Jalankan perintah berikut untuk menjalankan proses Deployment:
+
+    ```bash
+    ./deploy.sh
+    ```
+
+    **JALANKAN SCRIPT SETELAH SEMUA PERUBAHAN DI-COMMIT.** Script akan langsung berhenti (exit 1) dan menampilkan daftar file jika masih ada perubahan yang belum di-commit maupun file *untracked*. Gunakan `git stash` untuk menyimpan sementara pekerjaan yang belum selesai, lalu `git stash pop` setelah deployment selesai.
+
+    **note**: Proses Deployment akan melakukan tahapan berikut:
+    - **Versioning**
+    - **Build**
+    - **Deployment**
+
+    ### 4.1 Versioning
+    Versioning secara *default* membaca versi terakhir pada baris pertama `changelogs.txt` lalu menaikkan patch sebanyak 1 (contoh: `0.0.21` → `0.0.22`).
+
+    Daftar perubahan diambil dari commit sejak versi sebelumnya. Commit dengan pesan yang mengandung `auto-changelogs`, `update-changelogs`, `Merge remote-tracking`, `build-unrelated:`, `unrelated-build:` atau `Revert` tidak dimasukkan ke changelog.
+
+    Hasil versioning menghasilkan *output* berikut:
+
+        0.0.21
+            - Add PJP Logos on Report
+            - Add Total Count and Sum of each Outlets in Report
+            - Show only active web bindings with the green badge
+        0.0.20
+            - Cache merchant and outlet queries for five minutes
+            - Simplify outlet detail rows and modal metadata
+
+        ...
+
+    Setelah `changelogs.txt` diperbarui, script otomatis akan:
+    - commit dengan pesan `auto-changelogs: <version>`
+    - membuat git tag `<version>` (tag lama dengan nama yang sama dihapus dan dibuat ulang)
+    - push commit & tag ke remote `origin` dan `personal`
+
+    ### 4.2 Build
+    Image di-build satu kali dengan tag `latest`, kemudian image yang sama diberi tag versi:
+
+    - `container.banksulutgo.co.id:5000/web-merchant-fe:latest`
+    - `container.banksulutgo.co.id:5000/web-merchant-fe:<current_version>`
+
+    `<current_version>` mengacu pada versi terbaru pada `changelogs.txt`. Jika build gagal, script berhenti dan tidak melakukan push.
+
+    ### 4.3 Deployment
+    Kedua tag (`latest` dan `<current_version>`) di-push ke registry **container.banksulutgo.co.id:5000**.
+
+    Container butuh env `APP_URL` (URL backend) dan `APP_ENV`. Contoh menjalankan langsung:
+    ```bash
+    docker run --rm -p 8080:80 -e APP_URL=http://localhost:30020 -e APP_ENV=development container.banksulutgo.co.id:5000/web-merchant-fe:latest
+    ```
+
+    Untuk rollback, ganti tag `latest` dengan versi sebelumnya (contoh `:0.0.20`).
+
+    ### 4.4 Parameters
+    `deploy.sh` memiliki parameter berikut:
+
+    - `--version <VERSION>` | `--version=<VERSION>`: menentukan versi untuk git tag dan tag docker image
+    - `--no-build`: hanya memperbarui changelog, commit, tag dan push git, tanpa build & push docker image
+    - `--help`: menampilkan bantuan
+
+    contoh perintah:
+    ```bash
+    ./deploy.sh --version 1.0.0
+    ```
+
+    Jika parameter `--version` tidak digunakan, versi yang dipakai adalah patch terakhir ditambah 1.

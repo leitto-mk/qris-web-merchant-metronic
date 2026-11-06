@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 450" width="1000" height="450" role="img" aria-label="Alur QRIS Web Merchant: admin login, kelola merchant dan outlet, buat terminal; terminal login, ikat browser key, login challenge, generate QR, pelanggan bayar, transaksi masuk ke report. Reset device menghapus key terminal.">
+<title>Alur QRIS Web Merchant</title>
+<defs>
+<linearGradient id="gbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1222"/><stop offset=".6" stop-color="#111a33"/><stop offset="1" stop-color="#1b1640"/></linearGradient>
+<radialGradient id="gsp" cx=".85" cy="0" r=".7"><stop offset="0" stop-color="#6366f1" stop-opacity=".22"/><stop offset="1" stop-color="#6366f1" stop-opacity="0"/></radialGradient>
+<linearGradient id="gact" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+<linearGradient id="gwin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#10b981"/><stop offset="1" stop-color="#047857"/></linearGradient>
+<linearGradient id="gbad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ef4444"/><stop offset="1" stop-color="#9f1239"/></linearGradient>
+<linearGradient id="gbar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3b82f6"/><stop offset=".8" stop-color="#10b981"/><stop offset="1" stop-color="#ef4444"/></linearGradient>
+<pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#ffffff" fill-opacity=".06"/></pattern>
+<filter id="blur" x="-40%" y="-60%" width="180%" height="220%"><feGaussianBlur stdDeviation="9"/></filter>
+<filter id="soft" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="1.6"/></filter>
+<marker id="ai" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="#3a4870"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M0 1L9 5L0 9z" fill="#34d399"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M0 1L9 5L0 9z" fill="#f87171"/></marker>
+</defs>
+<style>
+.ttl{font:800 20px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;fill:#f8fafc;letter-spacing:-.01em}
+.sttl{font:500 12px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;fill:#8b9bc4}
+.grpt{font:700 10.5px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:.16em;fill:#7c8db5;text-anchor:middle}
+.grp{fill:none;stroke:#334166;stroke-width:1.5}
+.nd{fill:#16203a;stroke:#2c3a5e;stroke-width:1.5}
+.done{fill:#0f3b35;stroke:#34d399}
+.act{fill:url(#gact);stroke:#a5b4fc;stroke-width:1.5}
+.win{fill:url(#gwin);stroke:#6ee7b7;stroke-width:1.5}
+.badn{fill:url(#gbad);stroke:#fca5a5;stroke-width:1.5}
+.glow{opacity:.75;animation:pulse 1.2s ease-in-out infinite alternate}
+.actg{fill:#6366f1}.wing{fill:#10b981}.badng{fill:#ef4444}
+@keyframes pulse{from{opacity:.35}to{opacity:.9}}
+.st{font:700 13.5px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;fill:#f1f5f9;text-anchor:middle}
+.sub{font:500 11px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;fill:#a3b1d1;text-anchor:middle}
+.bdg{fill:#1e2a4a;stroke:#3b4b78;stroke-width:1.5}
+.okb{fill:#10b981;stroke:#6ee7b7}
+.bdgt{font:700 11px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;fill:#c7d2fe;text-anchor:middle}
+.chk{fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ln{fill:none;stroke:#3a4870;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ok{stroke:#34d399;stroke-width:3}
+.bad{stroke:#f87171;stroke-width:3}
+.dash{stroke-dasharray:4 6}
+.march{stroke-dasharray:9 7;animation:march .6s linear infinite}
+@keyframes march{to{stroke-dashoffset:-16}}
+.spark{fill:#e0e7ff;filter:url(#soft)}
+.lbl{font:italic 500 11px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;fill:#7c8db5;text-anchor:middle}
+.pill{fill:#ffffff;fill-opacity:.05;stroke:#ffffff;stroke-opacity:.08}
+.cap{font:600 14px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;fill:#e2e8f0;text-anchor:middle}
+.capr{fill:#fecaca}
+.trk{fill:#24304f}.tick{fill:#0f172a}
+.lg{font:600 11.5px ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;fill:#a3b1d1}
+.lga{fill:#818cf8}.lgo{fill:#34d399}.lgr{fill:#f87171}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+@keyframes kc0{0%{opacity:0} 10.000%{opacity:0} 11.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#c0{opacity:0;animation:kc0 20.0s ease-in-out infinite}@keyframes kp0{0%{opacity:0;transform:translate(0,0)} 7.350%{opacity:0;transform:translate(0,0)} 7.750%{opacity:1;transform:translate(0,0)} 10.000%{opacity:1;transform:translate(39.5px,0.0px)} 10.400%{opacity:0;transform:translate(39.5px,0.0px)} 100%{opacity:0;transform:translate(39.5px,0.0px)}}#p0{opacity:0;animation:kp0 20.0s linear infinite}@keyframes kc1{0%{opacity:0} 20.000%{opacity:0} 21.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#c1{opacity:0;animation:kc1 20.0s ease-in-out infinite}@keyframes kp1{0%{opacity:0;transform:translate(0,0)} 17.350%{opacity:0;transform:translate(0,0)} 17.750%{opacity:1;transform:translate(0,0)} 20.000%{opacity:1;transform:translate(39.5px,0.0px)} 20.400%{opacity:0;transform:translate(39.5px,0.0px)} 100%{opacity:0;transform:translate(39.5px,0.0px)}}#p1{opacity:0;animation:kp1 20.0s linear infinite}@keyframes kc2{0%{opacity:0} 30.000%{opacity:0} 31.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#c2{opacity:0;animation:kc2 20.0s ease-in-out infinite}@keyframes kp2{0%{opacity:0;transform:translate(0,0)} 25.100%{opacity:0;transform:translate(0,0)} 25.500%{opacity:1;transform:translate(0,0)} 25.784%{opacity:1;transform:translate(0.0px,28px)} 29.492%{opacity:1;transform:translate(-365.0px,28px)} 30.000%{opacity:1;transform:translate(-365.0px,78px)} 30.400%{opacity:0;transform:translate(-365.0px,78px)} 100%{opacity:0;transform:translate(-365.0px,78px)}}#p2{opacity:0;animation:kp2 20.0s linear infinite}@keyframes kc3{0%{opacity:0} 40.000%{opacity:0} 41.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#c3{opacity:0;animation:kc3 20.0s ease-in-out infinite}@keyframes kp3{0%{opacity:0;transform:translate(0,0)} 37.350%{opacity:0;transform:translate(0,0)} 37.750%{opacity:1;transform:translate(0,0)} 40.000%{opacity:1;transform:translate(39.5px,0.0px)} 40.400%{opacity:0;transform:translate(39.5px,0.0px)} 100%{opacity:0;transform:translate(39.5px,0.0px)}}#p3{opacity:0;animation:kp3 20.0s linear infinite}@keyframes kc4{0%{opacity:0} 50.000%{opacity:0} 51.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#c4{opacity:0;animation:kc4 20.0s ease-in-out infinite}@keyframes kp4{0%{opacity:0;transform:translate(0,0)} 47.350%{opacity:0;transform:translate(0,0)} 47.750%{opacity:1;transform:translate(0,0)} 50.000%{opacity:1;transform:translate(39.5px,0.0px)} 50.400%{opacity:0;transform:translate(39.5px,0.0px)} 100%{opacity:0;transform:translate(39.5px,0.0px)}}#p4{opacity:0;animation:kp4 20.0s linear infinite}@keyframes kc5{0%{opacity:0} 60.000%{opacity:0} 61.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#c5{opacity:0;animation:kc5 20.0s ease-in-out infinite}@keyframes kp5{0%{opacity:0;transform:translate(0,0)} 57.350%{opacity:0;transform:translate(0,0)} 57.750%{opacity:1;transform:translate(0,0)} 60.000%{opacity:1;transform:translate(39.5px,0.0px)} 60.400%{opacity:0;transform:translate(39.5px,0.0px)} 100%{opacity:0;transform:translate(39.5px,0.0px)}}#p5{opacity:0;animation:kp5 20.0s linear infinite}@keyframes kc6{0%{opacity:0} 70.000%{opacity:0} 71.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#c6{opacity:0;animation:kc6 20.0s ease-in-out infinite}@keyframes kp6{0%{opacity:0;transform:translate(0,0)} 67.350%{opacity:0;transform:translate(0,0)} 67.750%{opacity:1;transform:translate(0,0)} 70.000%{opacity:1;transform:translate(39.5px,0.0px)} 70.400%{opacity:0;transform:translate(39.5px,0.0px)} 100%{opacity:0;transform:translate(39.5px,0.0px)}}#p6{opacity:0;animation:kp6 20.0s linear infinite}@keyframes kc7{0%{opacity:0} 80.000%{opacity:0} 81.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#c7{opacity:0;animation:kc7 20.0s ease-in-out infinite}@keyframes kp7{0%{opacity:0;transform:translate(0,0)} 77.350%{opacity:0;transform:translate(0,0)} 77.750%{opacity:1;transform:translate(0,0)} 80.000%{opacity:1;transform:translate(0.0px,-78px)} 80.400%{opacity:0;transform:translate(0.0px,-78px)} 100%{opacity:0;transform:translate(0.0px,-78px)}}#p7{opacity:0;animation:kp7 20.0s linear infinite}@keyframes krj{0%{opacity:0} 90.000%{opacity:0} 91.500%{opacity:1} 98.500%{opacity:1} 100.000%{opacity:0} 100%{opacity:0}}#rj{opacity:0;animation:krj 20.0s ease-in-out infinite}@keyframes ka0d{0%{opacity:0} 10.000%{opacity:0} 11.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#a0d{opacity:0;animation:ka0d 20.0s ease-in-out infinite}@keyframes ka0a{0%{opacity:0} 0.000%{opacity:0} 1.500%{opacity:1} 8.500%{opacity:1} 10.000%{opacity:0} 100%{opacity:0}}#a0a{opacity:0;animation:ka0a 20.0s ease-in-out infinite}@keyframes ka0k{0%{opacity:0} 10.000%{opacity:0} 11.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#a0k{opacity:0;animation:ka0k 20.0s ease-in-out infinite}@keyframes ka1d{0%{opacity:0} 20.000%{opacity:0} 21.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#a1d{opacity:0;animation:ka1d 20.0s ease-in-out infinite}@keyframes ka1a{0%{opacity:0} 10.000%{opacity:0} 11.500%{opacity:1} 18.500%{opacity:1} 20.000%{opacity:0} 100%{opacity:0}}#a1a{opacity:0;animation:ka1a 20.0s ease-in-out infinite}@keyframes ka1k{0%{opacity:0} 20.000%{opacity:0} 21.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#a1k{opacity:0;animation:ka1k 20.0s ease-in-out infinite}@keyframes ka2d{0%{opacity:0} 30.000%{opacity:0} 31.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#a2d{opacity:0;animation:ka2d 20.0s ease-in-out infinite}@keyframes ka2a{0%{opacity:0} 20.000%{opacity:0} 21.500%{opacity:1} 28.500%{opacity:1} 30.000%{opacity:0} 100%{opacity:0}}#a2a{opacity:0;animation:ka2a 20.0s ease-in-out infinite}@keyframes ka2k{0%{opacity:0} 30.000%{opacity:0} 31.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#a2k{opacity:0;animation:ka2k 20.0s ease-in-out infinite}@keyframes ka3a{0%{opacity:0} 90.000%{opacity:0} 91.500%{opacity:1} 98.500%{opacity:1} 100.000%{opacity:0} 100%{opacity:0}}#a3a{opacity:0;animation:ka3a 20.0s ease-in-out infinite}@keyframes ka4a{0%{opacity:0} 80.000%{opacity:0} 81.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#a4a{opacity:0;animation:ka4a 20.0s ease-in-out infinite}@keyframes kt0d{0%{opacity:0} 40.000%{opacity:0} 41.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t0d{opacity:0;animation:kt0d 20.0s ease-in-out infinite}@keyframes kt0a{0%{opacity:0} 30.000%{opacity:0} 31.500%{opacity:1} 38.500%{opacity:1} 40.000%{opacity:0} 100%{opacity:0}}#t0a{opacity:0;animation:kt0a 20.0s ease-in-out infinite}@keyframes kt0k{0%{opacity:0} 40.000%{opacity:0} 41.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t0k{opacity:0;animation:kt0k 20.0s ease-in-out infinite}@keyframes kt1d{0%{opacity:0} 50.000%{opacity:0} 51.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t1d{opacity:0;animation:kt1d 20.0s ease-in-out infinite}@keyframes kt1a{0%{opacity:0} 40.000%{opacity:0} 41.500%{opacity:1} 48.500%{opacity:1} 50.000%{opacity:0} 100%{opacity:0}}#t1a{opacity:0;animation:kt1a 20.0s ease-in-out infinite}@keyframes kt1k{0%{opacity:0} 50.000%{opacity:0} 51.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t1k{opacity:0;animation:kt1k 20.0s ease-in-out infinite}@keyframes kt2d{0%{opacity:0} 60.000%{opacity:0} 61.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t2d{opacity:0;animation:kt2d 20.0s ease-in-out infinite}@keyframes kt2a{0%{opacity:0} 50.000%{opacity:0} 51.500%{opacity:1} 58.500%{opacity:1} 60.000%{opacity:0} 100%{opacity:0}}#t2a{opacity:0;animation:kt2a 20.0s ease-in-out infinite}@keyframes kt2k{0%{opacity:0} 60.000%{opacity:0} 61.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t2k{opacity:0;animation:kt2k 20.0s ease-in-out infinite}@keyframes kt3d{0%{opacity:0} 70.000%{opacity:0} 71.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t3d{opacity:0;animation:kt3d 20.0s ease-in-out infinite}@keyframes kt3a{0%{opacity:0} 60.000%{opacity:0} 61.500%{opacity:1} 68.500%{opacity:1} 70.000%{opacity:0} 100%{opacity:0}}#t3a{opacity:0;animation:kt3a 20.0s ease-in-out infinite}@keyframes kt3k{0%{opacity:0} 70.000%{opacity:0} 71.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t3k{opacity:0;animation:kt3k 20.0s ease-in-out infinite}@keyframes kt4d{0%{opacity:0} 80.000%{opacity:0} 81.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t4d{opacity:0;animation:kt4d 20.0s ease-in-out infinite}@keyframes kt4a{0%{opacity:0} 70.000%{opacity:0} 71.500%{opacity:1} 78.500%{opacity:1} 80.000%{opacity:0} 100%{opacity:0}}#t4a{opacity:0;animation:kt4a 20.0s ease-in-out infinite}@keyframes kt4k{0%{opacity:0} 80.000%{opacity:0} 81.500%{opacity:1} 88.500%{opacity:1} 90.000%{opacity:0} 100%{opacity:0}}#t4k{opacity:0;animation:kt4k 20.0s ease-in-out infinite}@keyframes kt0{0%{opacity:0;transform:translateY(6px)} 0.000%{opacity:0;transform:translateY(6px)} 1.500%{opacity:1;transform:translateY(0)} 8.500%{opacity:1;transform:translateY(0)} 10.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t0{opacity:0;animation:kt0 20.0s ease-in-out infinite}@keyframes kt1{0%{opacity:0;transform:translateY(6px)} 10.000%{opacity:0;transform:translateY(6px)} 11.500%{opacity:1;transform:translateY(0)} 18.500%{opacity:1;transform:translateY(0)} 20.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t1{opacity:0;animation:kt1 20.0s ease-in-out infinite}@keyframes kt2{0%{opacity:0;transform:translateY(6px)} 20.000%{opacity:0;transform:translateY(6px)} 21.500%{opacity:1;transform:translateY(0)} 28.500%{opacity:1;transform:translateY(0)} 30.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t2{opacity:0;animation:kt2 20.0s ease-in-out infinite}@keyframes kt3{0%{opacity:0;transform:translateY(6px)} 30.000%{opacity:0;transform:translateY(6px)} 31.500%{opacity:1;transform:translateY(0)} 38.500%{opacity:1;transform:translateY(0)} 40.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t3{opacity:0;animation:kt3 20.0s ease-in-out infinite}@keyframes kt4{0%{opacity:0;transform:translateY(6px)} 40.000%{opacity:0;transform:translateY(6px)} 41.500%{opacity:1;transform:translateY(0)} 48.500%{opacity:1;transform:translateY(0)} 50.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t4{opacity:0;animation:kt4 20.0s ease-in-out infinite}@keyframes kt5{0%{opacity:0;transform:translateY(6px)} 50.000%{opacity:0;transform:translateY(6px)} 51.500%{opacity:1;transform:translateY(0)} 58.500%{opacity:1;transform:translateY(0)} 60.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t5{opacity:0;animation:kt5 20.0s ease-in-out infinite}@keyframes kt6{0%{opacity:0;transform:translateY(6px)} 60.000%{opacity:0;transform:translateY(6px)} 61.500%{opacity:1;transform:translateY(0)} 68.500%{opacity:1;transform:translateY(0)} 70.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t6{opacity:0;animation:kt6 20.0s ease-in-out infinite}@keyframes kt7{0%{opacity:0;transform:translateY(6px)} 70.000%{opacity:0;transform:translateY(6px)} 71.500%{opacity:1;transform:translateY(0)} 78.500%{opacity:1;transform:translateY(0)} 80.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t7{opacity:0;animation:kt7 20.0s ease-in-out infinite}@keyframes kt8{0%{opacity:0;transform:translateY(6px)} 80.000%{opacity:0;transform:translateY(6px)} 81.500%{opacity:1;transform:translateY(0)} 88.500%{opacity:1;transform:translateY(0)} 90.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t8{opacity:0;animation:kt8 20.0s ease-in-out infinite}@keyframes kt9{0%{opacity:0;transform:translateY(6px)} 90.000%{opacity:0;transform:translateY(6px)} 91.500%{opacity:1;transform:translateY(0)} 98.500%{opacity:1;transform:translateY(0)} 100.000%{opacity:0;transform:translateY(6px)} 100%{opacity:0;transform:translateY(6px)}}#t9{opacity:0;animation:kt9 20.0s ease-in-out infinite}@keyframes kbar{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}#bar{transform-box:fill-box;transform-origin:left center;animation:kbar 20.0s linear infinite}</style>
+<rect x="0" y="0" width="1000" height="450" rx="20" fill="url(#gbg)"/>
+<rect x="0" y="0" width="1000" height="450" rx="20" fill="url(#dots)"/>
+<rect x="0" y="0" width="1000" height="450" rx="20" fill="url(#gsp)"/>
+<rect x=".75" y=".75" width="998.5" height="448.5" rx="19.5" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-width="1.5"/>
+<text class="ttl" x="40" y="44">Alur QRIS Web Merchant</text>
+<text class="sttl" x="40" y="64">Portal Merchant QRIS · Bank SulutGo</text>
+<circle class="lga" cx="640" cy="38" r="5"/><text class="lg" x="651" y="42">Aktif</text>
+<circle class="lgo" cx="722" cy="38" r="5"/><text class="lg" x="733" y="42">Selesai</text>
+<circle class="lgr" cx="814" cy="38" r="5"/><text class="lg" x="825" y="42">Reset</text>
+<path class="grp" d="M70 104 V98 H940 V104"/><text class="grpt" x="505" y="90">ADMIN MERCHANT</text>
+<path class="grp" d="M70 338 V344 H940 V338"/><text class="grpt" x="505" y="360">TERMINAL / KASIR</text>
+<path class="ln" d="M210 150.0 L249.5 150.0" marker-end="url(#ai)"/>
+<path id="c0" class="ln ok" d="M210 150.0 L249.5 150.0" marker-end="url(#ag)"/>
+<circle id="p0" class="spark" cx="210" cy="150.0" r="4.5"/>
+<path class="ln" d="M392.5 150.0 L432 150.0" marker-end="url(#ai)"/>
+<path id="c1" class="ln ok" d="M392.5 150.0 L432 150.0" marker-end="url(#ag)"/>
+<circle id="p1" class="spark" cx="392.5" cy="150.0" r="4.5"/>
+<path class="ln dash" d="M505.0 180 L505.0 208 L140.0 208 L140.0 258" marker-end="url(#ai)"/>
+<path id="c2" class="ln ok" d="M505.0 180 L505.0 208 L140.0 208 L140.0 258" marker-end="url(#ag)"/>
+<circle id="p2" class="spark" cx="505.0" cy="180" r="4.5"/>
+<path class="ln" d="M210 292.0 L249.5 292.0" marker-end="url(#ai)"/>
+<path id="c3" class="ln ok" d="M210 292.0 L249.5 292.0" marker-end="url(#ag)"/>
+<circle id="p3" class="spark" cx="210" cy="292.0" r="4.5"/>
+<path class="ln" d="M392.5 292.0 L432 292.0" marker-end="url(#ai)"/>
+<path id="c4" class="ln ok" d="M392.5 292.0 L432 292.0" marker-end="url(#ag)"/>
+<circle id="p4" class="spark" cx="392.5" cy="292.0" r="4.5"/>
+<path class="ln" d="M575 292.0 L614.5 292.0" marker-end="url(#ai)"/>
+<path id="c5" class="ln ok" d="M575 292.0 L614.5 292.0" marker-end="url(#ag)"/>
+<circle id="p5" class="spark" cx="575" cy="292.0" r="4.5"/>
+<path class="ln" d="M757.5 292.0 L797 292.0" marker-end="url(#ai)"/>
+<path id="c6" class="ln ok" d="M757.5 292.0 L797 292.0" marker-end="url(#ag)"/>
+<circle id="p6" class="spark" cx="757.5" cy="292.0" r="4.5"/>
+<path class="ln" d="M870.0 262 L870.0 184" marker-end="url(#ai)"/>
+<path id="c7" class="ln ok" d="M870.0 262 L870.0 184" marker-end="url(#ag)"/>
+<circle id="p7" class="spark" cx="870.0" cy="262" r="4.5"/>
+<path class="ln dash" d="M687.5 180 L687.5 238 L322.5 238 L322.5 258" marker-end="url(#ai)"/>
+<path id="rj" class="ln bad march" d="M687.5 180 L687.5 238 L322.5 238 L322.5 258" marker-end="url(#ar)"/>
+<text class="lbl" x="322.5" y="201">akun terminal</text>
+<text class="lbl" x="505.0" y="254">reset: ikat ulang</text>
+<text class="lbl" x="920.0" y="225">transaksi masuk</text>
+<rect class="nd" x="70" y="120" width="140" height="60" rx="14"/>
+<g id="a0d"><rect class="nd done" x="70" y="120" width="140" height="60" rx="14"/></g>
+<g id="a0a"><rect class="glow actg" x="70" y="120" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd act" x="70" y="120" width="140" height="60" rx="14"/></g>
+<text class="st" x="140.0" y="147">Login Admin</text>
+<text class="sub" x="140.0" y="165">username + password</text>
+<circle class="bdg" cx="72" cy="122" r="11"/><text class="bdgt" x="72" y="126">1</text>
+<g id="a0k"><circle class="bdg okb" cx="72" cy="122" r="11"/><path class="chk" d="M67 122 l3.5 3.5 l6.5 -7"/></g>
+<rect class="nd" x="252.5" y="120" width="140" height="60" rx="14"/>
+<g id="a1d"><rect class="nd done" x="252.5" y="120" width="140" height="60" rx="14"/></g>
+<g id="a1a"><rect class="glow actg" x="252.5" y="120" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd act" x="252.5" y="120" width="140" height="60" rx="14"/></g>
+<text class="st" x="322.5" y="147">Merchant &amp; Outlet</text>
+<text class="sub" x="322.5" y="165">data &amp; daftar outlet</text>
+<circle class="bdg" cx="254.5" cy="122" r="11"/><text class="bdgt" x="254.5" y="126">2</text>
+<g id="a1k"><circle class="bdg okb" cx="254.5" cy="122" r="11"/><path class="chk" d="M249.5 122 l3.5 3.5 l6.5 -7"/></g>
+<rect class="nd" x="435" y="120" width="140" height="60" rx="14"/>
+<g id="a2d"><rect class="nd done" x="435" y="120" width="140" height="60" rx="14"/></g>
+<g id="a2a"><rect class="glow actg" x="435" y="120" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd act" x="435" y="120" width="140" height="60" rx="14"/></g>
+<text class="st" x="505.0" y="147">Buat Terminal</text>
+<text class="sub" x="505.0" y="165">akun kasir per outlet</text>
+<circle class="bdg" cx="437" cy="122" r="11"/><text class="bdgt" x="437" y="126">3</text>
+<g id="a2k"><circle class="bdg okb" cx="437" cy="122" r="11"/><path class="chk" d="M432 122 l3.5 3.5 l6.5 -7"/></g>
+<rect class="nd" x="617.5" y="120" width="140" height="60" rx="14"/>
+<g id="a3a"><rect class="glow badng" x="617.5" y="120" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd badn" x="617.5" y="120" width="140" height="60" rx="14"/></g>
+<text class="st" x="687.5" y="147">Reset Device</text>
+<text class="sub" x="687.5" y="165">hapus key terminal</text>
+<circle class="bdg" cx="619.5" cy="122" r="11"/><text class="bdgt" x="619.5" y="126">!</text>
+<rect class="nd" x="800" y="120" width="140" height="60" rx="14"/>
+<g id="a4a"><rect class="glow wing" x="800" y="120" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd win" x="800" y="120" width="140" height="60" rx="14"/></g>
+<text class="st" x="870.0" y="147">Report</text>
+<text class="sub" x="870.0" y="165">histori &amp; total trx</text>
+<circle class="bdg" cx="802" cy="122" r="11"/><text class="bdgt" x="802" y="126">9</text>
+<rect class="nd" x="70" y="262" width="140" height="60" rx="14"/>
+<g id="t0d"><rect class="nd done" x="70" y="262" width="140" height="60" rx="14"/></g>
+<g id="t0a"><rect class="glow actg" x="70" y="262" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd act" x="70" y="262" width="140" height="60" rx="14"/></g>
+<text class="st" x="140.0" y="289">Login Terminal</text>
+<text class="sub" x="140.0" y="307">akun dari admin</text>
+<circle class="bdg" cx="72" cy="264" r="11"/><text class="bdgt" x="72" y="268">4</text>
+<g id="t0k"><circle class="bdg okb" cx="72" cy="264" r="11"/><path class="chk" d="M67 264 l3.5 3.5 l6.5 -7"/></g>
+<rect class="nd" x="252.5" y="262" width="140" height="60" rx="14"/>
+<g id="t1d"><rect class="nd done" x="252.5" y="262" width="140" height="60" rx="14"/></g>
+<g id="t1a"><rect class="glow actg" x="252.5" y="262" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd act" x="252.5" y="262" width="140" height="60" rx="14"/></g>
+<text class="st" x="322.5" y="289">Ikat Browser Key</text>
+<text class="sub" x="322.5" y="307">sekali per browser</text>
+<circle class="bdg" cx="254.5" cy="264" r="11"/><text class="bdgt" x="254.5" y="268">5</text>
+<g id="t1k"><circle class="bdg okb" cx="254.5" cy="264" r="11"/><path class="chk" d="M249.5 264 l3.5 3.5 l6.5 -7"/></g>
+<rect class="nd" x="435" y="262" width="140" height="60" rx="14"/>
+<g id="t2d"><rect class="nd done" x="435" y="262" width="140" height="60" rx="14"/></g>
+<g id="t2a"><rect class="glow actg" x="435" y="262" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd act" x="435" y="262" width="140" height="60" rx="14"/></g>
+<text class="st" x="505.0" y="289">Login Challenge</text>
+<text class="sub" x="505.0" y="307">key tanda tangani</text>
+<circle class="bdg" cx="437" cy="264" r="11"/><text class="bdgt" x="437" y="268">6</text>
+<g id="t2k"><circle class="bdg okb" cx="437" cy="264" r="11"/><path class="chk" d="M432 264 l3.5 3.5 l6.5 -7"/></g>
+<rect class="nd" x="617.5" y="262" width="140" height="60" rx="14"/>
+<g id="t3d"><rect class="nd done" x="617.5" y="262" width="140" height="60" rx="14"/></g>
+<g id="t3a"><rect class="glow actg" x="617.5" y="262" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd act" x="617.5" y="262" width="140" height="60" rx="14"/></g>
+<text class="st" x="687.5" y="289">Generate QR</text>
+<text class="sub" x="687.5" y="307">QR dinamis + nominal</text>
+<circle class="bdg" cx="619.5" cy="264" r="11"/><text class="bdgt" x="619.5" y="268">7</text>
+<g id="t3k"><circle class="bdg okb" cx="619.5" cy="264" r="11"/><path class="chk" d="M614.5 264 l3.5 3.5 l6.5 -7"/></g>
+<rect class="nd" x="800" y="262" width="140" height="60" rx="14"/>
+<g id="t4d"><rect class="nd done" x="800" y="262" width="140" height="60" rx="14"/></g>
+<g id="t4a"><rect class="glow actg" x="800" y="262" width="140" height="60" rx="14" filter="url(#blur)"/><rect class="nd act" x="800" y="262" width="140" height="60" rx="14"/></g>
+<text class="st" x="870.0" y="289">Pelanggan Bayar</text>
+<text class="sub" x="870.0" y="307">scan via app issuer</text>
+<circle class="bdg" cx="802" cy="264" r="11"/><text class="bdgt" x="802" y="268">8</text>
+<g id="t4k"><circle class="bdg okb" cx="802" cy="264" r="11"/><path class="chk" d="M797 264 l3.5 3.5 l6.5 -7"/></g>
+<rect class="pill" x="150" y="378" width="700" height="34" rx="17"/>
+<text id="t0" class="cap" x="500" y="400">Admin merchant login dengan username dan password.</text>
+<text id="t1" class="cap" x="500" y="400">Admin melihat data merchant dan daftar outlet.</text>
+<text id="t2" class="cap" x="500" y="400">Admin membuat akun terminal (kasir) untuk outlet.</text>
+<text id="t3" class="cap" x="500" y="400">Terminal login memakai akun dari admin.</text>
+<text id="t4" class="cap" x="500" y="400">Login pertama: browser membuat key dan mendaftarkannya ke server.</text>
+<text id="t5" class="cap" x="500" y="400">Login berikutnya: key menandatangani challenge dari server.</text>
+<text id="t6" class="cap" x="500" y="400">Kasir input nominal, server membuat QR dinamis.</text>
+<text id="t7" class="cap" x="500" y="400">Pelanggan scan QR dan membayar lewat aplikasi issuer.</text>
+<text id="t8" class="cap" x="500" y="400">Transaksi masuk ke histori dan report admin.</text>
+<text id="t9" class="cap capr" x="500" y="400">Reset device oleh admin? Key terminal dihapus, terminal ikat ulang browser key.</text>
+<rect class="trk" x="350" y="426" width="300" height="4" rx="2"/>
+<rect id="bar" x="350" y="426" width="300" height="4" rx="2" fill="url(#gbar)"/>
+<rect class="tick" x="379.0" y="426" width="2" height="4"/>
+<rect class="tick" x="409.0" y="426" width="2" height="4"/>
+<rect class="tick" x="439.0" y="426" width="2" height="4"/>
+<rect class="tick" x="469.0" y="426" width="2" height="4"/>
+<rect class="tick" x="499.0" y="426" width="2" height="4"/>
+<rect class="tick" x="529.0" y="426" width="2" height="4"/>
+<rect class="tick" x="559.0" y="426" width="2" height="4"/>
+<rect class="tick" x="589.0" y="426" width="2" height="4"/>
+<rect class="tick" x="619.0" y="426" width="2" height="4"/>
+</svg>
