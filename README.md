@@ -155,15 +155,23 @@ Route hanya untuk tampilan. Hak akses sebenarnya dicek di backend.
     Untuk rollback, ganti tag `latest` dengan versi sebelumnya (contoh `:0.0.20`).
 
     ### 4.4 Parameters
-    `deploy.sh` memiliki parameter berikut:
+    Di terminal, `deploy.sh` berjalan **interaktif** dan hanya menanyakan hal yang belum ditentukan lewat parameter (termasuk saat `--dry-run`): pilih versi dan build dengan tombol panah (↑↓ / j k / angka, Enter), lihat ringkasan beserta daftar commit yang masuk changelog, lalu konfirmasi. Pilihan pertama selalu alur versi baru (patch +1 → build & push → deploy), jadi cukup tekan Enter untuk rilis biasa. Setiap pilihan menampilkan parameter yang setara (mis. `--use-current`, `--no-build`), dan ringkasan menampilkan perintah lengkapnya untuk dijalankan ulang dengan `-y`. Setiap langkah tampil dengan spinner & durasi; jika gagal, script berhenti dan menampilkan potongan log (log lengkap ada di `/tmp/deploy-*.log`).
 
-    - `--version <VERSION>` | `--version=<VERSION>`: menentukan versi untuk git tag dan tag docker image
-    - `--no-build`: hanya memperbarui changelog, commit, tag dan push git, tanpa build & push docker image
-    - `--help`: menampilkan bantuan
+    | Parameter | Fungsi |
+    |-----------|--------|
+    | `--version <V>` / `--version=<V>` | Pakai versi tertentu untuk git tag & tag docker image |
+    | `--use-current` | Pakai versi terakhir di `changelogs.txt` tanpa menaikkan versi: entry changelog diperbarui, tag dibuat ulang, image di-build & push ulang |
+    | `--no-build` | Hanya changelog, commit, tag & push git, tanpa build & push docker image |
+    | `--dry-run` | Tampilkan ringkasan & langkah yang akan dijalankan tanpa mengubah apa pun |
+    | `-y`, `--yes` | Tanpa konfirmasi (wajib jika dijalankan bukan dari terminal, mis. CI) |
+    | `-h`, `--help` | Bantuan |
 
     contoh perintah:
     ```bash
-    ./deploy.sh --version 1.0.0
+    ./deploy.sh                      # interaktif
+    ./deploy.sh --version 1.0.0      # versi tertentu, konfirmasi sekali
+    ./deploy.sh --use-current -y     # rebuild versi sekarang tanpa konfirmasi
+    ./deploy.sh --dry-run            # cek rencana dulu
     ```
 
-    Jika parameter `--version` tidak digunakan, versi yang dipakai adalah patch terakhir ditambah 1.
+    Jika parameter `--version` / `--use-current` tidak digunakan, versi yang dipakai adalah patch terakhir ditambah 1.
