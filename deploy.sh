@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Versioning, changelog, git tag, then docker build & push (:latest + :<version>).
-# Run ./deploy.sh --help for options. Without options in a terminal it asks interactively.
+# Local steps run first and pushes last, so a failure can be rolled back.
+# Run ./deploy.sh --help for options. In a terminal it asks for anything no option decided.
 set -u
 
 # ---------- per-repo config ----------
 IMAGE="container.banksulutgo.co.id:5000/web-merchant-fe"
 REMOTES=(origin personal)
 ABOUT="QRIS Web Merchant front-end portal · React 19 + Vite, served by nginx"
-BUILD_DESC="Build the React app into an nginx image, tag it :latest and the version, then push to the registry."
+BUILD_DESC="Build the React app into an nginx image tagged :latest and the version."
 pre_build() { :; }
 # --------------------------------------
 
@@ -28,7 +29,7 @@ JOB=''
 
 cursor() { $TTY && printf '\e[?25%s' "$1"; }
 trap 'cursor h' EXIT
-trap '[ -n "$JOB" ] && kill "$JOB" 2>/dev/null; cursor h; printf "\n  %s✖ Cancelled%s\n" "$RED" "$R"; exit 130' INT
+trap '[ -n "$JOB" ] && kill "$JOB" 2>/dev/null; JOB=""; cursor h; printf "\n  %s✖ Cancelled%s\n" "$RED" "$R"; rollback; exit 130' INT
 
 die()  { printf '  %s✖ %s%s\n' "$RED" "$*" "$R" >&2; exit 1; }
 ok()   { printf '  %s✔%s %s\n' "$GRN" "$R" "$*"; }
@@ -40,8 +41,24 @@ section() {
     return 0
 }
 
+# ---------- rollback ----------
+# Each step that changes something registers how to undo itself; on failure they run newest first.
+UNDO=() ROLLING=false SOFT_MSG=skipped
+undo() { local s; printf -v s '%q ' "$@"; UNDO+=("$s"); }
+rollback() {
+    $ROLLING && return 0
+    ROLLING=true SOFT_MSG="failed, fix it by hand"
+    if [ ${#UNDO[@]} -eq 0 ]; then
+        printf '\n  %sNothing was changed, so there is nothing to roll back.%s\n' "$D" "$R"; return 0
+    fi
+    section "Rollback" "A step failed, so everything done so far is undone in reverse order."
+    local i
+    for ((i = ${#UNDO[@]} - 1; i >= 0; i--)); do eval "${UNDO[i]}"; done
+    UNDO=()
+}
+
 # run [--soft] "label" cmd... : spinner while cmd runs, output goes to $LOG.
-# --soft: failure is shown as skipped instead of stopping the deploy.
+# --soft: a failure is reported but does not stop or roll back the deploy.
 run() {
     local soft=false; [ "$1" = --soft ] && { soft=true; shift; }
     local label=$1; shift
@@ -65,16 +82,20 @@ run() {
     if [ $rc -eq 0 ]; then
         printf '%s  %s✔%s %s %s%ss%s%s\n' "$CR" "$GRN" "$R" "$label" "$D" $((SECONDS - start)) "$R" "$EL"
     elif $soft; then
-        printf '%s  %s–%s %s %s(skipped)%s%s\n' "$CR" "$YEL" "$R" "$label" "$D" "$R" "$EL"
+        printf '%s  %s–%s %s %s(%s)%s%s\n' "$CR" "$YEL" "$R" "$label" "$D" "$SOFT_MSG" "$R" "$EL"
+        return 1
     else
         printf '%s  %s✖%s %s%s\n\n' "$CR" "$RED" "$R" "$label" "$EL"
         tail -n 25 "$LOG" | sed 's/^/    /'
-        printf '\n  %sLog lengkap: %s%s\n' "$D" "$LOG" "$R"
+        rollback
+        printf '\n  %s✖ Deploy failed at: %s%s\n' "$RED" "$label" "$R"
+        printf '  %s→ Full log: %s%s\n\n' "$D" "$LOG" "$R"
         exit 1
     fi
 }
 
 # choose "question" option... : arrow keys / j k / number, Enter to pick. Sets CHOICE (0-based).
+# An option may carry a hint after "|", shown dimmed (e.g. the matching parameter).
 choose() {
     local q=$1; shift
     local opts=("$@") n=$# sel=0 key i label hint
@@ -117,8 +138,9 @@ PARAMS=(
     "--version <V>|Use a specific version (also --version=<V>)"
     "--use-current|Reuse the latest version in $CHANGELOG: re-tag & rebuild without bumping"
     "--no-build|Changelog, commit, tag & git push only, no docker"
+    "--build-only|Build & push the image only (current version), no changelog or git"
     "--dry-run|Show the plan without running anything"
-    "-y, --yes|No questions or confirmation (default: patch +1, with build)"
+    "-y, --yes|No questions or confirmation (default: patch +1, full release)"
     "-h, --help|Show this help"
 )
 
@@ -137,28 +159,30 @@ usage() {
 ${B}deploy.sh${R} - changelog, git tag, build & push ${IMAGE##*/}
 
 ${B}Usage${R}
-  ./deploy.sh                    Interactive: pick version & build, then confirm
+  ./deploy.sh                    Interactive: pick what to deploy & the version, then confirm
   ./deploy.sh --dry-run          Same, but only shows the plan
   ./deploy.sh [options] -y       No questions at all
 
 In a terminal, deploy.sh only asks about what no parameter has decided yet
-(--version / --use-current decide the version, --no-build decides the build).
+(--no-build / --build-only decide what to deploy, --version / --use-current the version).
+If a step fails, everything done before it is rolled back.
 
 ${B}Parameters${R}
 EOF
     print_params
-    printf '\nWithout --version / --use-current, the last patch number is bumped by 1.\n'
+    printf '\nWithout --version / --use-current, the last patch number is bumped by 1\n(--build-only uses the current version instead).\n'
 }
 
 # ---------- args ----------
-VERSION='' USE_CURRENT=false BUILD=true BUILD_SET=false DRY_RUN=false YES=false
+VERSION='' USE_CURRENT=false MODE='' DRY_RUN=false YES=false
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --version=*)   VERSION=${1#*=}; shift ;;
         --version)     [ -n "${2:-}" ] && [ "${2#-}" = "$2" ] || die "--version needs a value"; VERSION=$2; shift 2 ;;
         --use-current) USE_CURRENT=true; shift ;;
-        --no-build)    BUILD=false; BUILD_SET=true; shift ;;
+        --no-build)    [ "$MODE" = image ] && die "--no-build and --build-only cannot be used together"; MODE=git; shift ;;
+        --build-only)  [ "$MODE" = git ] && die "--no-build and --build-only cannot be used together"; MODE=image; shift ;;
         --dry-run)     DRY_RUN=true; shift ;;
         -y|--yes)      YES=true; shift ;;
         -h|--help)     usage; exit 0 ;;
@@ -168,7 +192,8 @@ done
 ACTIVE=()
 [ -n "$VERSION" ] && ACTIVE+=(--version)
 $USE_CURRENT && ACTIVE+=(--use-current)
-$BUILD_SET && ACTIVE+=(--no-build)
+[ "$MODE" = git ] && ACTIVE+=(--no-build)
+[ "$MODE" = image ] && ACTIVE+=(--build-only)
 $DRY_RUN && ACTIVE+=(--dry-run)
 $YES && ACTIVE+=(--yes)
 [ -n "$VERSION" ] && $USE_CURRENT && die "--version and --use-current cannot be used together"
@@ -208,7 +233,23 @@ write_changelog() {
 }
 
 commit_changelog() { git add -A && git commit -m "auto-changelogs: $VERSION"; }
-push_remote()      { git push "$1" && git push "$1" --tags; }
+
+# Remote state before publishing, so a failed deploy can put it back: "<branch sha>\n<tag sha>"
+snapshot_remote() {
+    local out
+    out=$(git ls-remote "$1" "refs/heads/$BRANCH" "refs/tags/$VERSION") || return 1
+    { printf '%s\n' "$out" | awk -v r="refs/heads/$BRANCH" '$2==r {print $1}'
+      printf '%s\n' "$out" | awk -v r="refs/tags/$VERSION" '$2==r {print $1}'; } >"$SNAP.$1"
+}
+# restore_ref remote ref old-sha expected-sha : put a remote ref back (delete it if it did not exist)
+restore_ref() {
+    if [ -n "$3" ]; then git push --force-with-lease="$2:$4" "$1" "$3:$2"
+    else git push "$1" --delete "$2"; fi
+}
+# restore_image tag old-id : point a local image tag back (remove it if it did not exist)
+restore_image() {
+    if [ -n "$2" ]; then docker tag "$2" "$IMAGE:$1"; else docker rmi "$IMAGE:$1"; fi
+}
 
 # ---------- preflight ----------
 DEPLOY_START=$SECONDS
@@ -218,20 +259,21 @@ HEAD_SHA=$(git rev-parse --short HEAD)
 CURRENT=$(current_version)
 cur=${CURRENT:-0.0.1}
 NEXT="${cur%.*}.$(( ${cur##*.} + 1 ))"
+SNAP=$(mktemp)
 
 bar() { printf '  %s┃%s %s\n' "$CYN" "$R" "$*"; }
 echo
 bar "${B}${CYN}◆ deploy${R}  ${B}${REPO}${R}"
 bar "$ABOUT"
-bar "${D}changelog → git tag → push git → docker build → push image${R}"
+bar "${D}changelog → commit & tag → docker build → push git → push image${R}"
 bar
 bar "${D}branch${R} $BRANCH   ${D}HEAD${R} $HEAD_SHA   ${D}version${R} ${CURRENT:-none yet}"
 
 section "Available parameters" "Pass them directly, e.g. ./deploy.sh --use-current -y  (✔ = active now)"
 print_params ${ACTIVE[@]+"${ACTIVE[@]}"}
 
-section "Checks" "Deploys only run from committed work."
-
+section "Checks" "Deploys only run from committed work, which also makes a clean rollback possible."
+[ "$BRANCH" = HEAD ] && die "Detached HEAD: check out a branch first"
 if [ -n "$(git status --porcelain)" ]; then
     if $DRY_RUN; then
         warn "Working tree is not clean (ignored because of --dry-run)"
@@ -246,68 +288,91 @@ fi
 
 # ---------- choose ----------
 # Interactive: ask only for what no flag already decided. --yes or no terminal: no questions.
-ASK_VERSION=false ASK_BUILD=false
+ASK_MODE=false ASK_VERSION=false
 if $TTY && ! $YES; then
+    [ -z "$MODE" ] && ASK_MODE=true
     [ -z "$VERSION" ] && ! $USE_CURRENT && ASK_VERSION=true
-    $BUILD_SET || ASK_BUILD=true
 fi
-if $ASK_VERSION || $ASK_BUILD; then
-    section "Options" "Choose the release version and whether to build the docker image."
+if $ASK_MODE || $ASK_VERSION; then
+    section "Options" "Choose what to deploy and which version."
 fi
+if $ASK_MODE; then
+    choose "Deploy" \
+        "Full release (git + image)" \
+        "Git only, no image|--no-build" \
+        "Image only, no git|--build-only"
+    MODE=$(echo full git image | cut -d' ' -f$((CHOICE + 1)))
+fi
+MODE=${MODE:-full}
 if $ASK_VERSION; then
-    choose "Version" \
-        "New version $NEXT (patch +1)" \
-        "Reuse current ${CURRENT:-0.0.1} (rebuild)|--use-current" \
-        "Other version...|--version <V>"
-    case $CHOICE in
-        0) VERSION=$NEXT ;;
-        1) USE_CURRENT=true ;;
-        2) while :; do
-               ask "Version" "$NEXT"
-               [[ "$ANSWER" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]] && break
-               warn "Invalid version: $ANSWER"
-           done
-           VERSION=$ANSWER ;;
-    esac
-fi
-if $ASK_BUILD; then
-    choose "Docker image" "Build & push :latest + :version" "Skip, changelog & git only|--no-build"
-    [ "$CHOICE" -eq 1 ] && BUILD=false
+    if [ "$MODE" = image ]; then
+        choose "Version" "Current ${CURRENT:-0.0.1}" "Other version...|--version <V>"
+        [ "$CHOICE" -eq 0 ] && USE_CURRENT=true
+    else
+        choose "Version" \
+            "New version $NEXT (patch +1)" \
+            "Reuse current ${CURRENT:-0.0.1} (rebuild)|--use-current" \
+            "Other version...|--version <V>"
+        case $CHOICE in 0) VERSION=$NEXT ;; 1) USE_CURRENT=true ;; esac
+    fi
+    if [ -z "$VERSION" ] && ! $USE_CURRENT; then
+        while :; do
+            ask "Version" "$([ "$MODE" = image ] && echo "${CURRENT:-$NEXT}" || echo "$NEXT")"
+            [[ "$ANSWER" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]] && break
+            warn "Invalid version: $ANSWER"
+        done
+        VERSION=$ANSWER
+    fi
 fi
 
-if $USE_CURRENT; then
-    [ -n "$CURRENT" ] || die "No version in $CHANGELOG yet for --use-current"
+GIT=true BUILD=true
+[ "$MODE" = git ] && BUILD=false
+[ "$MODE" = image ] && GIT=false
+if $USE_CURRENT || { [ "$MODE" = image ] && [ -z "$VERSION" ]; }; then
+    [ -n "$CURRENT" ] || die "No version in $CHANGELOG yet: pass --version"
     VERSION=$CURRENT
 fi
 VERSION=${VERSION:-$NEXT}
 
 # ---------- summary ----------
-BASE=$(changelog_base "$VERSION")
-ENTRIES=$(changelog_entries "$BASE")
-COUNT=$(printf '%s' "$ENTRIES" | grep -c . || true)
-
 section "Summary" "Review it first, nothing changes until you confirm."
-if [ "$VERSION" = "$CURRENT" ]; then label="$VERSION ${D}(reusing the current version)${R}"
+case $MODE in
+    full)  printf '    %-10s %s\n' "Deploy" "Full release ${D}(changelog, git tag & push, image build & push)${R}" ;;
+    git)   printf '    %-10s %s\n' "Deploy" "Git only ${D}(no image)${R}" ;;
+    image) printf '    %-10s %s\n' "Deploy" "Image only ${D}(no changelog or git changes)${R}" ;;
+esac
+if [ "$VERSION" = "$CURRENT" ]; then label="$VERSION ${D}(current version)${R}"
 else label="${CURRENT:-–} → ${B}$VERSION${R}"; fi
 printf '    %-10s %s\n' "Version" "$label"
-git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null && \
-    printf '    %-10s %s\n' "" "${YEL}tag $VERSION already exists and will be recreated${R}"
-printf '    %-10s %s\n' "Remote" "${REMOTES[*]}"
+TAG_AT=$(git rev-parse -q --verify "refs/tags/$VERSION^{commit}" 2>/dev/null || true)
+if $GIT && [ -n "$TAG_AT" ]; then
+    printf '    %-10s %s\n' "" "${YEL}tag $VERSION already exists and will be moved to the new commit${R}"
+elif ! $GIT && [ "$TAG_AT" != "$(git rev-parse HEAD)" ]; then
+    printf '    %-10s %s\n' "" "${YEL}HEAD is not tagged $VERSION: the image is built from ${HEAD_SHA}${R}"
+fi
+$GIT && printf '    %-10s %s\n' "Remote" "${REMOTES[*]}"
 if $BUILD; then
-    printf '    %-10s %s\n' "Image" "${IMAGE##*/}:latest"
-    printf '    %-10s %s\n' "" "${IMAGE##*/}:$VERSION"
-else
-    printf '    %-10s %s\n' "Image" "${D}skipped${R}"
+    printf '    %-10s %s\n' "Image" "${IMAGE##*/}:$VERSION"
+    printf '    %-10s %s\n' "" "${IMAGE##*/}:latest"
 fi
 CMD="./deploy.sh"
-if $USE_CURRENT; then CMD+=" --use-current"; elif [ "$VERSION" != "$NEXT" ]; then CMD+=" --version $VERSION"; fi
-$BUILD || CMD+=" --no-build"
+[ "$MODE" = git ] && CMD+=" --no-build"
+[ "$MODE" = image ] && CMD+=" --build-only"
+if [ "$MODE" = image ]; then [ "$VERSION" != "$CURRENT" ] && CMD+=" --version $VERSION"
+elif $USE_CURRENT; then CMD+=" --use-current"
+elif [ "$VERSION" != "$NEXT" ]; then CMD+=" --version $VERSION"; fi
 printf '    %-10s %s\n' "Command" "${CYN}$CMD -y${R} ${D}(rerun without questions)${R}"
-printf '    %-10s %s commits since %s\n' "Changelog" "$COUNT" "${BASE:-the start}"
-if [ "$COUNT" -gt 0 ]; then
-    printf '%s\n' "$ENTRIES" | head -n 8 | sed "s/^    - /      ${D}•${R} /"
-    [ "$COUNT" -gt 8 ] && printf '      %s… +%d more%s\n' "$D" $((COUNT - 8)) "$R"
+if $GIT; then
+    BASE=$(changelog_base "$VERSION")
+    ENTRIES=$(changelog_entries "$BASE")
+    COUNT=$(printf '%s' "$ENTRIES" | grep -c . || true)
+    printf '    %-10s %s commits since %s\n' "Changelog" "$COUNT" "${BASE:-the start}"
+    if [ "$COUNT" -gt 0 ]; then
+        printf '%s\n' "$ENTRIES" | head -n 8 | sed "s/^    - /      ${D}•${R} /"
+        [ "$COUNT" -gt 8 ] && printf '      %s… +%d more%s\n' "$D" $((COUNT - 8)) "$R"
+    fi
 fi
+printf '    %-10s %s\n' "Rollback" "${D}any failure undoes the steps before it; an image tag already in the registry stays${R}"
 
 if ! $YES && ! $DRY_RUN; then
     if $TTY; then
@@ -319,37 +384,69 @@ if ! $YES && ! $DRY_RUN; then
     fi
 fi
 
-# ---------- git ----------
-section "Changelog & git" "Record new commits in $CHANGELOG, recreate tag $VERSION, then push to ${REMOTES[*]}."
-if $DRY_RUN; then
-    printf '  %s○ Write %s  (dry-run)%s\n' "$D" "$CHANGELOG" "$R"
-else
-    write_changelog
-    ok "$CHANGELOG updated"
+# ---------- local: changelog, commit, tag ----------
+ORIG_SHA=$(git rev-parse HEAD)
+OLD_TAG=$(git rev-parse -q --verify "refs/tags/$VERSION" 2>/dev/null || true)
+if $GIT; then
+    section "Changelog & tag" "Local only: record new commits in $CHANGELOG, commit, and tag $VERSION."
+    undo run --soft "Reset $CHANGELOG & HEAD to ${ORIG_SHA:0:7}" git reset -q --hard "$ORIG_SHA"
+    if $DRY_RUN; then
+        printf '  %s○ Write %s  (dry-run)%s\n' "$D" "$CHANGELOG" "$R"
+    else
+        write_changelog
+        ok "$CHANGELOG updated"
+    fi
+    if $DRY_RUN || [ -n "$(git status --porcelain)" ]; then
+        run "Commit auto-changelogs: $VERSION" commit_changelog
+    else
+        printf '  %s–%s Commit %s(no changelog changes)%s\n' "$YEL" "$R" "$D" "$R"
+    fi
+    if [ -n "$OLD_TAG" ]; then undo run --soft "Restore local tag $VERSION" git update-ref "refs/tags/$VERSION" "$OLD_TAG"
+    else undo run --soft "Delete local tag $VERSION" git tag --delete "$VERSION"; fi
+    run "Tag $VERSION" git tag -f "$VERSION"
 fi
-run --soft "Delete local tag $VERSION" git tag --delete "$VERSION"
-for r in "${REMOTES[@]}"; do
-    run --soft "Delete tag $VERSION on $r" git push "$r" --delete "$VERSION"
-done
-if $DRY_RUN || [ -n "$(git status --porcelain)" ]; then
-    run "Commit auto-changelogs: $VERSION" commit_changelog
-else
-    printf '  %s–%s Commit %s(no changelog changes)%s\n' "$YEL" "$R" "$D" "$R"
-fi
-run "Create tag $VERSION" git tag "$VERSION"
-for r in "${REMOTES[@]}"; do
-    run "Push branch & tags to $r" push_remote "$r"
-done
+NEW_SHA=$(git rev-parse HEAD)
 
-# ---------- docker ----------
+# ---------- local: docker build ----------
 if $BUILD; then
-    section "Docker" "$BUILD_DESC"
+    section "Docker build" "Local only: $BUILD_DESC"
     pre_build
+    if ! $DRY_RUN; then
+        OLD_LATEST=$(docker image inspect -f '{{.Id}}' "$IMAGE:latest" 2>/dev/null || true)
+        OLD_VER=$(docker image inspect -f '{{.Id}}' "$IMAGE:$VERSION" 2>/dev/null || true)
+    fi
     run "Build ${IMAGE##*/}:latest" docker build -t "$IMAGE:latest" .
+    undo run --soft "Restore local image :latest" restore_image latest "${OLD_LATEST:-}"
     run "Tag :$VERSION" docker tag "$IMAGE:latest" "$IMAGE:$VERSION"
-    run "Push :latest" docker push "$IMAGE:latest"
-    run "Push :$VERSION" docker push "$IMAGE:$VERSION"
+    undo run --soft "Restore local image :$VERSION" restore_image "$VERSION" "${OLD_VER:-}"
 fi
+
+# ---------- publish ----------
+case $MODE in
+    full)  section "Publish" "Git remotes first (can be rolled back), then the registry: :$VERSION, and :latest last." ;;
+    git)   section "Publish" "Push the branch and tag $VERSION to ${REMOTES[*]} (rolled back if one fails)." ;;
+    image) section "Publish" "Push to the registry: :$VERSION first, :latest last so it only moves when everything worked." ;;
+esac
+if $GIT; then
+    for r in "${REMOTES[@]}"; do
+        run "Check $r" snapshot_remote "$r"
+    done
+    for r in "${REMOTES[@]}"; do
+        old_branch='' old_tag=''
+        if ! $DRY_RUN; then old_branch=$(sed -n 1p "$SNAP.$r"); old_tag=$(sed -n 2p "$SNAP.$r"); fi
+        run "Push $BRANCH to $r" git push "$r" "HEAD:refs/heads/$BRANCH"
+        undo run --soft "Restore $BRANCH on $r" restore_ref "$r" "refs/heads/$BRANCH" "$old_branch" "$NEW_SHA"
+        run "Push tag $VERSION to $r" git push --force "$r" "refs/tags/$VERSION"
+        undo run --soft "Restore tag $VERSION on $r" restore_ref "$r" "refs/tags/$VERSION" "$old_tag" "$(git rev-parse "refs/tags/$VERSION" 2>/dev/null)"
+    done
+fi
+if $BUILD; then
+    run "Push :$VERSION" docker push "$IMAGE:$VERSION"
+    undo warn "Registry keeps ${IMAGE##*/}:$VERSION (registry tags cannot be rolled back); :latest is unchanged"
+    run "Push :latest" docker push "$IMAGE:latest"
+fi
+UNDO=()
+rm -f "$SNAP" "$SNAP".*
 
 # ---------- done ----------
 total=$((SECONDS - DEPLOY_START))
@@ -358,11 +455,11 @@ if $DRY_RUN; then
     echo
     exit 0
 fi
-if $BUILD; then
-    section "Done" "Version $VERSION is tagged & pushed, and the image is ready to pull from the registry."
-else
-    section "Done" "Version $VERSION is tagged & pushed to git (no image build)."
-fi
+case $MODE in
+    full)  section "Done" "Version $VERSION is tagged & pushed, and the image is ready to pull from the registry." ;;
+    git)   section "Done" "Version $VERSION is tagged & pushed to git (no image build)." ;;
+    image) section "Done" "Image :$VERSION and :latest are pushed (no git changes)." ;;
+esac
 printf '  %s✔ Deploy %s succeeded%s %s(%dm %02ds)%s\n' "$B$GRN" "$VERSION" "$R" "$D" $((total / 60)) $((total % 60)) "$R"
 $BUILD && printf '  %s→%s Run locally (qris-web-merchant-api): %sdocker compose -f docker-compose.local.yaml pull && docker compose -f docker-compose.local.yaml up -d%s\n' "$CYN" "$R" "$B" "$R"
 printf '  %s→ Log: %s%s\n\n' "$D" "$LOG" "$R"

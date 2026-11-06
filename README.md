@@ -162,6 +162,7 @@ Route hanya untuk tampilan. Hak akses sebenarnya dicek di backend.
     | `--version <V>` / `--version=<V>` | Pakai versi tertentu untuk git tag & tag docker image |
     | `--use-current` | Pakai versi terakhir di `changelogs.txt` tanpa menaikkan versi: entry changelog diperbarui, tag dibuat ulang, image di-build & push ulang |
     | `--no-build` | Hanya changelog, commit, tag & push git, tanpa build & push docker image |
+    | `--build-only` | Hanya build & push docker image untuk versi sekarang, tanpa changelog maupun git |
     | `--dry-run` | Tampilkan ringkasan & langkah yang akan dijalankan tanpa mengubah apa pun |
     | `-y`, `--yes` | Tanpa konfirmasi (wajib jika dijalankan bukan dari terminal, mis. CI) |
     | `-h`, `--help` | Bantuan |
@@ -172,6 +173,9 @@ Route hanya untuk tampilan. Hak akses sebenarnya dicek di backend.
     ./deploy.sh --version 1.0.0      # versi tertentu, konfirmasi sekali
     ./deploy.sh --use-current -y     # rebuild versi sekarang tanpa konfirmasi
     ./deploy.sh --dry-run            # cek rencana dulu
+    ./deploy.sh --build-only -y      # build & push ulang image versi sekarang saja
     ```
 
-    Jika parameter `--version` / `--use-current` tidak digunakan, versi yang dipakai adalah patch terakhir ditambah 1.
+    Jika parameter `--version` / `--use-current` tidak digunakan, versi yang dipakai adalah patch terakhir ditambah 1. Dengan `--build-only`, versi yang dipakai adalah versi sekarang.
+
+    **Rollback otomatis**: semua langkah lokal (changelog, commit, tag, docker build) dijalankan lebih dulu, baru kemudian push (git remote → image `:<versi>` → image `:latest` paling akhir). Jika salah satu langkah gagal atau dibatalkan dengan Ctrl-C, semua langkah sebelumnya dibatalkan dengan urutan terbalik: `changelogs.txt` & commit di-reset, tag lokal dan tag/branch di remote dikembalikan ke posisi semula (`--force-with-lease`), dan tag image lokal dipulihkan. Satu-satunya yang tidak bisa dibatalkan adalah tag image yang sudah ter-push ke registry. Karena `:latest` di-push paling akhir, `:latest` hanya berubah jika seluruh deploy berhasil.
