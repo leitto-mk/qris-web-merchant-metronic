@@ -1,0 +1,134 @@
+0.0.21
+    - Add PJP Logos on Report
+    - Add Total Count and Sum of each Outlets in Report
+    - Show only active web bindings with the green badge
+    - Send security headers and a report-only CSP from the portal nginx
+    - Drop the client-side session expiry check that never ran
+    - Send the admin password with terminal actions and remove the unused request signature
+    - Show a re-login message when the terminal key has expired
+    - Send the password when registering a terminal key
+    - Send the signed challenge back on key login
+    - Follow server-side terminal binding on login
+    - Show 6-digit reset PIN input with expiry countdown on login
+0.0.20
+    - Cache merchant and outlet queries for five minutes
+    - Simplify outlet detail rows and modal metadata
+    - Fix outlet page crashes, row ids, sorting and stale query data
+    - Show the server error message in failed request toasts
+0.0.19
+    - Set Tag 51 starts with 00
+0.0.18
+    - Set Date in Save Private Key
+    - Set Public Key stored only on BE
+    - Broadcast Channel does not store the payload into localStorage
+    - Add Receipt Preview
+    - Update Trx History Mock
+    - Randomize Login Page Image
+0.0.17
+    - Update AuthService Error Messages
+    - Merchant Data appendable on Active User
+    - Remove Outlet & Terminal Columns to minimize table size
+0.0.16
+    - Eliminates toasts on certain requests
+    - Disable Reset button on Invalid Form
+    - Localized Reset Validation
+0.0.15
+    - Validate Reset Password Format before request
+    - Add History Transaction in Terminal Page
+    - Refresh Outlet Data on Terminal Create
+    - Username without default Uppercase
+    - AuthService: Adjust some requests using axiosInstance
+    - TLV: Replace tag 44 to 01 in Field 51
+    - Invalid Session redirected to /login
+0.0.14
+    - Adjust Reset Device & Password Functionalities
+    - Fix Show Password does not work in Reset
+    - Update TLV Data
+0.0.13
+    - Readjust Login on INACTIVE Terminal
+    - Deactivate Reset Password on INACTIVE Web Device, to prevent re-input password
+0.0.12
+    - Remove Existing Keys when Verify Signature is Invalid
+    - Unparse the already Parsed Session
+    - Remove existing Keys when Regenerating new Keys
+    - Retrieve Session using AuthService instead of manual
+    - Truncate Private Store when INVOKED is advised
+    - Handle empty Stored Key on Browser to be unable to login to Assigned Terminal
+    - Minor Adjustments on Terminal Page
+    - Send Original Terminal with the Requested Terminal on Login
+    - Reset Button on Each Device Cards
+    - Add Radio Options in Reset Device Terminal
+    - Add WebStatus in Reset Device Action Select
+    - Add Web Status on Outlet Details
+    - Adjust Skeleton
+    - Compress Images
+    - Remove Session data on Errors
+0.0.11
+    - Terminal must reset password before attempting Web Device registration
+    - Discard PublicKey on IndexedDB
+    - Verify Terminal gets its own Token
+0.0.10
+    - Add Browser Authentication for Terminal
+    - Add Images
+0.0.9
+    - Compare 1 Month into 30 Days
+    - Minor Fixes
+    - Update Dockerfile
+    - Adjust Report
+    - Adjust Table
+    - Adjust Active Terminals
+    - Adjust Range Selection in Report
+    - Add Range in Report
+    - Make Payment Popup with Fullscreen Detection
+    - Minor Fixes
+    - Adjust Nominal presentation
+    - Activate Reset Functionality on Reset Users
+    - Identify Layout for Active Pages
+    - Hide Unecessary Headers
+    - Hide Reset Terminal Device/Password if Outlet does not have Terminal
+0.0.8
+    - Adjust QR Payment in Terminal
+    - Update Site Icon
+    - Readjust QR implementation
+    - Adjust Terminal Page
+    - Adjust Outlet Page
+    - Adjust Reset Terminal & Device
+    - Set all Username as Upper on Login
+0.0.7
+    - Replace Device with Issuer
+    - Remove '3 Months' Filter, Changed to 'Yesterday'
+    - Adjust incoming Report of 'QRISAJ' flagged as 'OFF-US'
+    - Render Report
+    - Remove Accept-Encoding in post login Axios Requests
+0.0.6
+    - Add withCredentials for Login
+    - Update AuthService to be more robust
+    - Add gzip encoding to support performance suggested by BE
+0.0.5
+    - Fix AxiosInstance Interceptors Message
+    - Reapply "Fix Terminal Page"
+    - Update Toast Message
+0.0.4
+    - Spread the Header by ENV Checks
+0.0.3
+    - Display Merchant Report Mock based on APP_ENV
+0.0.2
+    - Add Skeleton Load State when Fetch Request tooks seconds
+    - Fix Terminal Page
+0.0.1
+    - Update Report
+    - Adjust Outlet's Expanded Details
+    - Update Merchant Report Filter
+    - Fix Outlet details now showing QR Image on HD or Lower Screens
+    - Report Minor Adjustments
+    - Disable Chart on Single Day Report
+    - Update Report Table
+    - Optimization
+    - Update README.md
+    - Add Terminal: Stepper 3 automatically appears when Step 2 is proceed and execute Send email
+    - Add Terminal: UX Improvement
+    - Logo Fixes
+    - Update Deployment Scripts
+    - Outlet: Small Adjustments
+    - Merchant Report: Small Adjustment
+    - Init
