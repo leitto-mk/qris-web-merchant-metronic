@@ -1,3 +1,7 @@
+0.0.22
+    - Make deploy.sh interactive
+    - Update README.md
+    - Add auto-deploy script
 0.0.21
     - Add PJP Logos on Report
     - Add Total Count and Sum of each Outlets in Report
