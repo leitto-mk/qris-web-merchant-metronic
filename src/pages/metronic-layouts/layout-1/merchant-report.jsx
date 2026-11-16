@@ -25,6 +25,7 @@ const BANK_LOGO_FILES = {
   'BRIS PAY': ['bri-syariah.svg', 4.27],
   'BANK RAYA': ['raya.svg', 1.84],
   'BANK BNI': ['bni.svg', 3.45],
+  'BANK MANDIRI': ['mandiri.svg', 3.43],
   'MANDIRI PAY': ['livin.svg', 1.74],
   'MANDIRI TASPEN': ['mandiri-taspen.svg', 1.88],
   'BANK SYARIAH INDONESIA': ['bsi.svg', 3.59],
