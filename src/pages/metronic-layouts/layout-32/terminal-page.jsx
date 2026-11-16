@@ -673,7 +673,7 @@ export function TerminalPage() {
           {tab === 'transaksi' && (
             // Expand container width for large screens so the Transaksi tab doesn't look cramped on >1080p
             <div className="container max-w-[1600px] 2xl:max-w-[1800px] mb-10">
-              <div className="flex flex-wrap lg:flex-nowrap justify-center gap-5 mt-5">
+              <div className="flex flex-wrap lg:flex-nowrap portrait:flex-col justify-center gap-5 mt-5">
                 {/* NOMINAL SUBMIT or QR PAYMENT DISPLAY */}
                 <div className="card flex flex-col gap-4">
                   {!payment?.display ? (
