@@ -24,9 +24,12 @@ const AuthService = {
   //Doesn't use AxiosInstance
   async login(formData) {
     try {
-      const response = await axios.post(API + '/login', formData, {
+      const post = () => axios.post(API + '/login', formData, {
         withCredentials: ENV === 'production', // Required for cross-origin cookies
       });
+      // ponytail: stopgap. After the page idles, the F5 WAF redirects this POST, the browser re-sends it as GET and the API
+      // answers 405 before any login logic runs. That round trip renews the F5 cookie, so one retry gets through. Remove once the F5 policy is fixed
+      const response = await post().catch((error) => (error.response?.status === 405 ? post() : Promise.reject(error)));
       const data = response.data.data;
 
       this.storeMerchantData(response, data);
