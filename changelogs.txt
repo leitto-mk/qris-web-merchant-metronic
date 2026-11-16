@@ -1,3 +1,6 @@
+0.0.23
+    - Auth endpoints now uses form-data format
+    - Do a retry POST over 405 response
 0.0.22
     - Add rollback mechanism on deploy.sh
     - Make deploy.sh interactive
