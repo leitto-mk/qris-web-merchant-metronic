@@ -7,18 +7,11 @@ import axiosInstance from '@/services/AxiosInstance';
 const API = API_URL + '/api/v1/mrchadmin';
 const ENV = APP_ENV;
 
-// Helper to create headers object conditionally
-const getApiHeaders = () => {
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-
-  if (ENV !== 'production') {
-    headers['X-BSG-WEBMRCH-TOKEN'] = localStorage.getItem('qris-web-merchant-token') || 'unused';
-  }
-
-  return headers;
-};
+// Pre-login calls send form fields and no JSON content type so the browser skips the CORS preflight, which the F5 WAF
+// in front of production often rejects. The dev-only token header still triggers one locally, where Laravel answers it
+const getApiHeaders = () => (ENV !== 'production'
+  ? { 'X-BSG-WEBMRCH-TOKEN': localStorage.getItem('qris-web-merchant-token') || 'unused' }
+  : {});
 
 const AuthService = {
   //Doesn't use AxiosInstance
@@ -50,7 +43,9 @@ const AuthService = {
   //Doesn't use AxiosInstance. Returns the reset PIN expiry, or null when there's no pending reset
   async checkReset(username) {
     try {
-      const response = await axios.post(API + '/login/check', { username });
+      const response = await axios.post(API + '/login/check', new URLSearchParams({ username }), {
+        withCredentials: ENV === 'production',
+      });
       return response.data.data.expired_at;
     } catch {
       return null;
@@ -118,11 +113,11 @@ const AuthService = {
         responseType: 'json',
         withCredentials: ENV === 'production',
         method: 'POST',
-        data: {
+        data: new URLSearchParams({
           kdUser: data.kd_user,
           challenge: challenge,
           signature: signature
-        }
+        })
       });
 
       this.storeMerchantData(response, data);
