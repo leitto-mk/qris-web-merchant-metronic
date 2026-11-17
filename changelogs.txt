@@ -1,3 +1,11 @@
+0.0.24
+    - Polish WebAuthn terminal login: Terminal button wait text, Security Key default focus, localized device errors
+    - Log terminals in with WebAuthn
+    - Register terminals with WebAuthn when the device supports it
+    - Add WebAuthn service; store the terminal's login method
+    - Add MPAN & Terminal on Receipt
+    - Show the throttling message on Report request
+    - Adjust Terminal Portrait Mode over Transaksi Page
 0.0.23
     - Add Mandiri Logo
     - Auth endpoints now uses form-data format
