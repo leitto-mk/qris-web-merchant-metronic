@@ -201,6 +201,26 @@ export function LoginPage() {
     }
   };
 
+  // Sign a server challenge with the stored record and verify it. A cancelled or unknown-device
+  // WebAuthn prompt becomes LOGIN_CANCELLED so callers keep the record.
+  const signInWithRecord = async (keys) => {
+    const { challenge } = await AuthService.getChallenge();
+    if (keys.type !== 'webauthn') {
+      const signature = await CryptoService.signChallenge(keys.privateKey, challenge);
+      return AuthService.verifySignature({ challenge, signature });
+    }
+    setWaitingDevice(true);
+    let fields;
+    try {
+      fields = await WebAuthnService.sign(challenge, keys.credentialId);
+    } catch (e) {
+      throw e.name === 'NotAllowedError' ? new Error('LOGIN_CANCELLED') : e;
+    } finally {
+      setWaitingDevice(false);
+    }
+    return AuthService.verifySignature({ challenge, ...fields });
+  };
+
   const handleTerminalLogin = async () => {
     setInvalid(false);
     setLoading(true);
@@ -224,8 +244,6 @@ export function LoginPage() {
       }
 
       let keys = await CryptoService.getKeys(kdUser);
-      let privateKey = keys?.privateKey;
-
       if (!keys) {
         throw new Error(
           'Device tidak terdaftar. Silahkan login sebagai Admin untuk mendaftarkan device ini.',
@@ -240,17 +258,7 @@ export function LoginPage() {
         );
       }
 
-      // 2. Get Challenge from Backend
-      const { challenge } = await AuthService.getChallenge();
-
-      // 3. Sign Challenge with Private Key
-      const signature = await CryptoService.signChallenge(
-        privateKey,
-        challenge,
-      );
-
-      // 4. Verify Signature with Backend
-      await AuthService.verifySignature({ challenge, signature });
+      await signInWithRecord(keys);
 
       navigate('/terminal/outlet');
     } catch (e) {
@@ -265,6 +273,9 @@ export function LoginPage() {
           setInvalidMessage(
             'Device Terminal ini telah di reset. Silahkan login kembali atau kontak Admin untuk pengaktifan Terminal',
           );
+          break;
+        case 'LOGIN_CANCELLED':
+          setInvalidMessage('Verifikasi dibatalkan atau perangkat tidak dikenali. Silahkan coba lagi, atau login dengan password untuk mendaftarkan ulang.');
           break;
         case 'CHALLENGE_EXPIRED':
           setInvalidMessage('Sesi Kadaluarsa. Silahkan login kembali.');
@@ -351,7 +362,6 @@ export function LoginPage() {
 
         let keys = await CryptoService.getKeys();
         let devOwner = keys?.kdUser;
-        let privateKey = keys?.privateKey;
 
         // 1. Generate the Keys
         if (!keys || should_regenerate) {
@@ -373,17 +383,7 @@ export function LoginPage() {
           throw new Error('User tidak terdaftar untuk Device ini.');
         }
 
-        // 2. Get Challenge from Backend
-        const { challenge } = await AuthService.getChallenge();
-
-        // 3. Sign Challenge with Private Key
-        const signature = await CryptoService.signChallenge(
-          privateKey,
-          challenge,
-        );
-
-        // 4. Verify Signature with Backend
-        await AuthService.verifySignature({ challenge, signature });
+        await signInWithRecord(keys);
         return true;
       } catch (e) {
         AuthService.removeSession();
@@ -401,6 +401,9 @@ export function LoginPage() {
             break;
           case 'WEBAUTHN_REQUIRED':
             setInvalidMessage('Terminal wajib menggunakan PIN/sidik jari perangkat atau Security Key. Aktifkan Windows Hello atau gunakan Security Key, lalu login kembali.');
+            break;
+          case 'LOGIN_CANCELLED':
+            setInvalidMessage('Verifikasi dibatalkan atau perangkat tidak dikenali. Silahkan coba lagi, atau login dengan password untuk mendaftarkan ulang.');
             break;
           case 'IS_REVOKED':
           case 'INVALID_SIGNATURE':
