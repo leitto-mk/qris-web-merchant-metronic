@@ -1,4 +1,5 @@
 0.0.24
+    - Accept Auto-fill by active Authenticator
     - Polish WebAuthn terminal login: Terminal button wait text, Security Key default focus, localized device errors
     - Log terminals in with WebAuthn
     - Register terminals with WebAuthn when the device supports it
