@@ -35,6 +35,7 @@ export function LoginPage() {
   const [waitingDevice, setWaitingDevice] = useState(false);
   const [methodDialogOpen, setMethodDialogOpen] = useState(false);
   const methodResolver = useRef(null);
+  const securityKeyBtn = useRef(null);
   const [showAccessTypeSelection, setShowAccessTypeSelection] = useState(false);
   // Set when the username has a pending password reset: the password field becomes the emailed 6-digit PIN
   const [pinExpiredAt, setPinExpiredAt] = useState(location.state?.expiredAt ?? null);
@@ -214,7 +215,11 @@ export function LoginPage() {
     try {
       fields = await WebAuthnService.sign(challenge, keys.credentialId);
     } catch (e) {
-      throw e.name === 'NotAllowedError' ? new Error('LOGIN_CANCELLED') : e;
+      if (e.name === 'NotAllowedError') throw new Error('LOGIN_CANCELLED');
+      if (e instanceof DOMException) {
+        throw new Error('Verifikasi perangkat gagal. Silahkan coba lagi, atau login dengan password untuk mendaftarkan ulang.');
+      }
+      throw e;
     } finally {
       setWaitingDevice(false);
     }
@@ -494,7 +499,7 @@ export function LoginPage() {
                   ) : (
                     <Monitor className="size-5 mr-2" />
                   )}
-                  {isVerifying ? 'Verifying Terminal...' : 'Terminal'}
+                  {waitingDevice ? 'Menunggu verifikasi perangkat...' : isVerifying ? 'Verifying Terminal...' : 'Terminal'}
                 </Button>
               </div>
             ) : (
@@ -648,7 +653,12 @@ export function LoginPage() {
             )}
 
             <AlertDialog open={methodDialogOpen} onOpenChange={(open) => !open && resolveMethod(null)}>
-              <AlertDialogContent>
+              <AlertDialogContent
+                onOpenAutoFocus={(e) => {
+                  e.preventDefault(); // Radix focuses Cancel (the weaker RSA choice)
+                  securityKeyBtn.current?.focus();
+                }}
+              >
                 <AlertDialogHeader>
                   <AlertDialogTitle>Verifikasi perangkat tidak tersedia</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -657,7 +667,7 @@ export function LoginPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel onClick={() => resolveMethod('rsa')}>Lanjutkan tanpa verifikasi perangkat</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => resolveMethod('webauthn-any')}>Gunakan Security Key</AlertDialogAction>
+                  <AlertDialogAction ref={securityKeyBtn} onClick={() => resolveMethod('webauthn-any')}>Gunakan Security Key</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
