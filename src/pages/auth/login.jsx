@@ -236,7 +236,7 @@ export function LoginPage() {
       );
 
       // 4. Verify Signature with Backend
-      await AuthService.verifySignature(signature, challenge);
+      await AuthService.verifySignature({ challenge, signature });
 
       navigate('/terminal/outlet');
     } catch (e) {
@@ -282,7 +282,7 @@ export function LoginPage() {
     await AuthService.registerPublicKey(publicKey, password);
 
     // Save to IndexedDB
-    await CryptoService.saveKeys(userKd, privateKey);
+    await CryptoService.saveKeys(userKd, { type: 'rsa', privateKey });
 
     // 2. Get Challenge from Backend
     const { challenge: newChallenge } = await AuthService.getChallenge();
@@ -294,7 +294,7 @@ export function LoginPage() {
     );
 
     // 4. Verify Signature with Backend
-    const verifyRes = await AuthService.verifySignature(newSignature, newChallenge);
+    const verifyRes = await AuthService.verifySignature({ challenge: newChallenge, signature: newSignature });
     return { verifyRes, privateKey };
   };
 
@@ -336,7 +336,7 @@ export function LoginPage() {
         );
 
         // 4. Verify Signature with Backend
-        await AuthService.verifySignature(signature, challenge);
+        await AuthService.verifySignature({ challenge, signature });
         return true;
       } catch (e) {
         AuthService.removeSession();

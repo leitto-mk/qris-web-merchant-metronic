@@ -71,11 +71,11 @@ const CryptoService = {
   },
 
   /**
-   * Stores the private key in IndexedDB for persistence.
+   * Stores the terminal's login record in IndexedDB for persistence.
    * @param {string} kdUser
-   * @param {CryptoKey} privateKey
+   * @param {{type: 'rsa', privateKey: CryptoKey} | {type: 'webauthn', credentialId: string}} record
    */
-  async saveKeys(kdUser, privateKey) {
+  async saveKeys(kdUser, record) {
     const db = await this._openDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction([STORE_NAME], 'readwrite');
@@ -83,7 +83,7 @@ const CryptoService = {
       const request = store.put({
         kdUser,
         generatedAt: new Date().toISOString(),
-        privateKey
+        ...record
       }, KEY_NAME);
       request.onsuccess = () => {
         db.close();
@@ -98,7 +98,8 @@ const CryptoService = {
 
   /**
    * Retrieves keys from IndexedDB.
-   * @returns {Promise<{privateKey: CryptoKey, publicKey: string} | null>}
+   * @returns {Promise<{type: 'rsa' | 'webauthn', kdUser: string, privateKey?: CryptoKey, credentialId?: string} | null>}
+   * Records saved before WebAuthn have no type and are RSA.
    */
   async getKeys() {
     const db = await this._openDB();
@@ -108,7 +109,8 @@ const CryptoService = {
       const request = store.get(KEY_NAME);
       request.onsuccess = (event) => {
         db.close();
-        resolve(event.target.result || null);
+        const record = event.target.result;
+        resolve(record ? { type: 'rsa', ...record } : null);
       };
       request.onerror = (event) => {
         db.close();

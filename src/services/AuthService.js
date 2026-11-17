@@ -82,6 +82,22 @@ const AuthService = {
     }
   },
 
+  // fields: { challenge, credential_id, client_data_json, attestation_object } (WebAuthnService.create result plus the challenge)
+  async registerWebAuthn(fields, password) {
+    try {
+      const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
+      const response = await axiosInstance().post('/user/register-web-key', {
+        kdUser: data.kd_user,
+        password: password,
+        ...fields
+      });
+      return response.data;
+    } catch (error) {
+      const msg = error.response?.data?.error_msg || 'Gagal melakukan Verifikasi Terminal';
+      throw new Error(msg);
+    }
+  },
+
   //Doesn't use AxiosInstance
   async getChallenge() {
     try {
@@ -103,8 +119,8 @@ const AuthService = {
     }
   },
 
-  //Doesn't use AxiosInstance. challenge is the one that was signed; the backend only accepts challenges it issued, once
-  async verifySignature(signature, challenge) {
+  //Doesn't use AxiosInstance. fields.challenge is the one that was signed; the backend only accepts challenges it issued, once
+  async verifySignature(fields) {
     try {
       const data = JSON.parse(localStorage.getItem('qris-web-merchant-data'));
       const response = await axios({
@@ -115,8 +131,7 @@ const AuthService = {
         method: 'POST',
         data: new URLSearchParams({
           kdUser: data.kd_user,
-          challenge: challenge,
-          signature: signature
+          ...fields
         })
       });
 
