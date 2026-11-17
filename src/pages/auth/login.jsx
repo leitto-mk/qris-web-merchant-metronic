@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeClosed, Key, LoaderCircleIcon, Monitor, User } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -6,6 +6,17 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import AuthService from '@/services/AuthService';
 import CryptoService from '@/services/CryptoService';
+import WebAuthnService from '@/services/WebAuthnService';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp.jsx';
@@ -21,6 +32,9 @@ export function LoginPage() {
   const [invalidMessage, setInvalidMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [waitingDevice, setWaitingDevice] = useState(false);
+  const [methodDialogOpen, setMethodDialogOpen] = useState(false);
+  const methodResolver = useRef(null);
   const [showAccessTypeSelection, setShowAccessTypeSelection] = useState(false);
   // Set when the username has a pending password reset: the password field becomes the emailed 6-digit PIN
   const [pinExpiredAt, setPinExpiredAt] = useState(location.state?.expiredAt ?? null);
@@ -272,8 +286,41 @@ export function LoginPage() {
     }
   };
 
+  const resolveMethod = (method) => {
+    methodResolver.current?.(method);
+    methodResolver.current = null;
+    setMethodDialogOpen(false);
+  };
+
+  // null = the user closed the dialog without choosing
+  const chooseRegistrationMethod = async () => {
+    if (!WebAuthnService.isSupported()) return 'rsa';
+    if (await WebAuthnService.isPlatformAvailable()) return 'webauthn-platform';
+    return new Promise((resolve) => {
+      methodResolver.current = resolve;
+      setMethodDialogOpen(true);
+    });
+  };
+
   // password: the backend only registers a key against the user's current password
   const performKeyPairFlow = async (userKd, password) => {
+    const method = await chooseRegistrationMethod();
+    if (!method) throw Object.assign(new Error('CANCELLED'), { name: 'NotAllowedError' });
+
+    if (method !== 'rsa') {
+      const { challenge } = await AuthService.getChallenge();
+      setWaitingDevice(true);
+      let created;
+      try {
+        created = await WebAuthnService.create(challenge, userKd, userKd, method === 'webauthn-platform');
+      } finally {
+        setWaitingDevice(false);
+      }
+      await AuthService.registerWebAuthn({ challenge, ...created }, password);
+      await CryptoService.saveKeys(userKd, { type: 'webauthn', credentialId: created.credential_id });
+      return { verifyRes: {} }; // no second sign-in check (Decision 7)
+    }
+
     const generated = await CryptoService.generateKeyPair();
     const publicKey = generated.publicKey;
     const privateKey = generated.privateKey;
@@ -343,7 +390,18 @@ export function LoginPage() {
         setShowAccessTypeSelection(false);
         setInvalid(true);
 
+        if (e.name === 'NotAllowedError') {
+          setInvalidMessage('Pendaftaran Terminal dibatalkan. Silahkan login kembali untuk mencoba lagi.');
+          return false;
+        }
+
         switch(e.message) {
+          case 'INVALID_ATTESTATION':
+            setInvalidMessage('Pendaftaran perangkat gagal. Silahkan coba lagi.');
+            break;
+          case 'WEBAUTHN_REQUIRED':
+            setInvalidMessage('Terminal wajib menggunakan PIN/sidik jari perangkat atau Security Key. Aktifkan Windows Hello atau gunakan Security Key, lalu login kembali.');
+            break;
           case 'IS_REVOKED':
           case 'INVALID_SIGNATURE':
             await CryptoService.clearKeys();
@@ -512,7 +570,7 @@ export function LoginPage() {
                       {loading ? (
                         <LoaderCircleIcon className="animate-spin size-4" />
                       ) : null}
-                      {loading ? 'Logging in...' : 'Login'}
+                      {waitingDevice ? 'Menunggu verifikasi perangkat...' : loading ? 'Logging in...' : 'Login'}
                     </Button>
                   </form>
                 ) : (
@@ -573,7 +631,9 @@ export function LoginPage() {
                       {loading ? (
                         <LoaderCircleIcon className="animate-spin size-4" />
                       ) : null}
-                      {isVerifying
+                      {waitingDevice
+                        ? 'Menunggu verifikasi perangkat...'
+                        : isVerifying
                         ? 'Verifying Security...'
                         : loading
                           ? 'Confirming...'
@@ -583,6 +643,21 @@ export function LoginPage() {
                 )}
               </>
             )}
+
+            <AlertDialog open={methodDialogOpen} onOpenChange={(open) => !open && resolveMethod(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Verifikasi perangkat tidak tersedia</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Perangkat ini belum memiliki PIN atau sidik jari (mis. Windows Hello). Gunakan Security Key, atau lanjutkan tanpa verifikasi perangkat.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => resolveMethod('rsa')}>Lanjutkan tanpa verifikasi perangkat</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => resolveMethod('webauthn-any')}>Gunakan Security Key</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {invalid && (
               <div className="text-red-600/90 font-normal leading-snug text-center mb-9 p-5 w-full border border-slate-500 rounded-xl border-dashed flex items-center justify-center uppercase mt-8">
