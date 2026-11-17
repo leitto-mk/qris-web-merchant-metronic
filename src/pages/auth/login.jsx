@@ -227,7 +227,7 @@ export function LoginPage() {
     } catch (e) {
       if (e.name === 'NotAllowedError') throw new Error('LOGIN_CANCELLED');
       if (e instanceof DOMException) {
-        throw new Error('Verifikasi perangkat gagal. Silahkan coba lagi, atau login dengan password untuk mendaftarkan ulang.');
+        throw new Error('Verifikasi perangkat gagal. Silahkan coba lagi, atau hubungi Admin untuk Reset Device.');
       }
       throw e;
     } finally {
@@ -290,14 +290,14 @@ export function LoginPage() {
           );
           break;
         case 'LOGIN_CANCELLED':
-          setInvalidMessage('Verifikasi dibatalkan atau perangkat tidak dikenali. Silahkan coba lagi, atau login dengan password untuk mendaftarkan ulang.');
+          setInvalidMessage('Verifikasi dibatalkan atau perangkat tidak dikenali. Silahkan coba lagi, atau hubungi Admin untuk Reset Device.');
           break;
         case 'CHALLENGE_EXPIRED':
           setInvalidMessage('Sesi Kadaluarsa. Silahkan login kembali.');
           break;
         case 'KEY_EXPIRED':
           await CryptoService.clearKeys();
-          setInvalidMessage('Masa berlaku Device Terminal telah habis. Silahkan login menggunakan password untuk mendaftarkan ulang.');
+          setInvalidMessage('Masa berlaku Device Terminal telah habis. Silahkan hubungi Admin untuk Reset Device.');
           break;
         case 'PASSWORD_RESET_REQUIRED':
           setInvalidMessage('Password telah di reset. Silahkan login menggunakan password dari email.');
@@ -418,7 +418,7 @@ export function LoginPage() {
             setInvalidMessage('Terminal wajib menggunakan PIN/sidik jari perangkat atau Security Key. Aktifkan Windows Hello atau gunakan Security Key, lalu login kembali.');
             break;
           case 'LOGIN_CANCELLED':
-            setInvalidMessage('Verifikasi dibatalkan atau perangkat tidak dikenali. Silahkan coba lagi, atau login dengan password untuk mendaftarkan ulang.');
+            setInvalidMessage('Verifikasi dibatalkan atau perangkat tidak dikenali. Silahkan coba lagi, atau hubungi Admin untuk Reset Device.');
             break;
           case 'IS_REVOKED':
           case 'INVALID_SIGNATURE':
