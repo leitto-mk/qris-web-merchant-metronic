@@ -150,6 +150,14 @@ export function LoginPage() {
         if (!(await performTerminalRegistration(data.kd_user, data.access_type, true, values.password))) return;
       }
 
+      // This SPA logs in over XHR, so Chrome/Edge can't tell it succeeded; hand them the credential so they offer to save it.
+      // Admins only: a terminal's password authorises its device key and shouldn't sit in the cashier PC's browser
+      if (data.access_type === 'ADM' && window.PasswordCredential) {
+        await navigator.credentials
+          .store(new window.PasswordCredential({ id: values.username, password: values.password, name: data.nama_user || values.username }))
+          .catch(() => {});
+      }
+
       navigate('/');
     } catch (e) {
       setInvalid(true);
