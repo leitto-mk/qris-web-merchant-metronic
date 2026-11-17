@@ -476,8 +476,7 @@ if (key === '30d')
         issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
       })));
     } catch (error) {
-      console.error('Gagal mengambil riwayat transaksi:', error?.response?.data?.errors ?? error);
-      setError('Gagal mengambil data. Coba lagi.');
+      setError(error?.response?.data?.error_msg ?? 'Gagal mengambil data. Coba lagi.');
     } finally {
       setLoadingHistory(false);
     }

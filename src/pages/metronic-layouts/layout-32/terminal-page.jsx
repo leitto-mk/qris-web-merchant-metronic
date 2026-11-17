@@ -368,8 +368,7 @@ export function TerminalPage() {
       }));
       setHistory(mapped);
     } catch (e) {
-      console.error(e);
-      setErrorHistory('Gagal mengambil data.');
+      setErrorHistory(e?.response?.data?.error_msg ?? 'Gagal mengambil data.');
     } finally {
       setLoadingHistory(false);
     }
