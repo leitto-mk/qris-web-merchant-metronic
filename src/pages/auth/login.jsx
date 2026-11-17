@@ -107,8 +107,10 @@ export function LoginPage() {
   }, []);
 
   const checkPendingReset = async (username) => {
-    form.setValue('password', '');
-    setPinExpiredAt(username ? await AuthService.checkReset(username) : null);
+    const expiredAt = username ? await AuthService.checkReset(username) : null;
+    // Clear only when the field switches between password and PIN, so a password the browser autofilled survives the blur
+    if (!expiredAt !== !pinExpiredAt) form.setValue('password', '');
+    setPinExpiredAt(expiredAt);
   };
 
   const handleLogin = async (values) => {
@@ -516,6 +518,7 @@ export function LoginPage() {
                         className="text-white font-semibold"
                         disabled={loading}
                         type="text"
+                        autoComplete="username"
                         placeholder="USERNAME"
                         {...form.register('username', {
                           onBlur: (e) => checkPendingReset(e.target.value.trim()),
@@ -558,6 +561,7 @@ export function LoginPage() {
                         className="text-white font-semibold"
                         disabled={loading}
                         type={onShow ? 'text' : 'password'}
+                        autoComplete="current-password"
                         placeholder="PASSWORD"
                         {...form.register('password')}
                       />
