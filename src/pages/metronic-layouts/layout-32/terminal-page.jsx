@@ -1206,6 +1206,20 @@ export function TerminalPage() {
                     </span>
                   </div>
 
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">MPAN:</span>
+                    <span className="font-mono font-medium">
+                      {selectedTx?.mpan || '-'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Terminal:</span>
+                    <span className="font-mono font-medium">
+                      {selectedTx?.terminal || '-'}
+                    </span>
+                  </div>
+
                   <div className="flex justify-between border-t pt-4 mt-4">
                     <span className="text-lg font-bold">Total:</span>
                     <span className="text-lg font-bold">
