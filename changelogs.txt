@@ -1,4 +1,5 @@
 0.0.24
+    - Enforce the portal CSP (VAPT 5.7); point terminals to admin Reset Device
     - Authenticator prompted when Admin Login succedded
     - Accept Auto-fill by active Authenticator
     - Polish WebAuthn terminal login: Terminal button wait text, Security Key default focus, localized device errors
