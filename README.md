@@ -20,7 +20,7 @@
 | 🏪 **Merchant & Outlet** | Data merchant, daftar outlet, dan binding terminal |
 | 📊 **Report** | Histori transaksi dengan total jumlah & nominal per outlet |
 | 🧾 **Terminal & QR** | Halaman kasir untuk generate QR dinamis, plus layar QR untuk pelanggan |
-| 🔐 **Browser Key** | Terminal terikat ke browser lewat key Web Crypto (IndexedDB) |
+| 🔐 **Device Key** | Terminal terikat ke browser lewat WebAuthn (Windows Hello / security key), alur lengkap di 3.2 |
 | 🐳 **Satu Image untuk Semua Env** | URL backend diisi saat runtime lewat env `APP_URL` |
 
 Back-End: [**qris-web-merchant-api**](https://gitea.dev.bsg.id/michio/qris-merchant-public-api)
@@ -67,7 +67,8 @@ qris-web-merchant-metronic/
 │   ├── services/
 │   │   ├── AxiosInstance.js           # Axios ke `${API_URL}/api/v1/mrchadmin`, toast per endpoint
 │   │   ├── AuthService.js             # Login, logout, validasi session
-│   │   ├── CryptoService.js           # Browser key terminal (Web Crypto + IndexedDB)
+│   │   ├── CryptoService.js           # Record key terminal di IndexedDB, browser key RSA (Web Crypto)
+│   │   ├── WebAuthnService.js         # Windows Hello / security key: daftar & tanda tangan challenge
 │   │   ├── QRService.js               # Render QR
 │   │   └── ImagePrintService.js       # Cetak gambar QR
 │   ├── context/AppDataContext.jsx     # Data merchant/outlet bersama
@@ -99,6 +100,165 @@ qris-web-merchant-metronic/
 | `/terminal/qr-display` | Terminal | Layar QR untuk pelanggan |
 
 Route hanya untuk tampilan. Hak akses sebenarnya dicek di backend.
+
+### 3.2 Alur Login
+Lima alur login admin dan terminal (kasir), dari FE [**qris-web-merchant-metronic**](https://gitea.dev.bsg.id/michio/qris-merchant-public-metronic) sampai BE [**qris-web-merchant-api**](https://gitea.dev.bsg.id/michio/qris-merchant-public-api). Isi yang sama ada di README kedua repo.
+
+| Kolom | Isi |
+|-------|-----|
+| **User** | Admin, kasir, dan authenticator OS (Windows Hello / Touch ID / security key) |
+| **login.jsx** | FE `src/pages/auth/login.jsx` (alur 5 juga `pages/metronic-layouts/layout-1/outlets.jsx`) |
+| **FE services** | FE `src/services/AuthService.js`, `WebAuthnService.js`, `CryptoService.js` |
+| **Controller** | BE `app/Http/Controllers/AuthController.php` (alur 5 juga `MerchantController.php`) |
+| **Actions · DB** | BE `app/Actions/*` dan tabel `MERCHENTUSER` |
+
+Aturan utama:
+- **Admin** login hanya dengan password (boleh diisi password manager browser). Admin tidak punya device key.
+- **Terminal yang sudah terikat** tidak pernah mendapat session dari password saja: `POST /login` menjawab `CHALLENGE_REQUIRED`, lalu browser harus menandatangani challenge dengan key-nya.
+- **Browser hanya bisa diikat** lewat PIN dari email (terminal baru, reset password, atau Reset Device web oleh admin), atau dalam jendela `BSG_APP_QRIS_RESET_EXP_SECOND` setelah password baru diset (untuk mengulang jika prompt Windows Hello dibatalkan).
+- **Masa berlaku key bergeser**: setiap login dengan key memperpanjang `WEB_KEY_EXP_DAYS`. Hanya terminal yang tidak login selama itu yang perlu Reset Device oleh admin.
+
+#### 1. Admin: login pertama
+Akun admin berstatus 3 (dibuat lewat import acquirer, atau setelah reset password).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Admin
+    participant P as login.jsx
+    participant S as FE services
+    participant C as AuthController
+    participant A as Actions · DB
+    Note over C,A: status 3 (import / reset password)
+    U->>P: password sementara
+    P->>S: AuthService.login()
+    S->>C: POST /login
+    Note over C,A: Hash::check · status 3
+    C->>A: IssueLoginToken
+    C-->>S: session · status 3
+    P-->>U: form password baru
+    U->>P: password baru ×2
+    P->>S: AuthService.confirmReset()
+    S->>C: POST user/reset
+    Note over C,A: resetConfirm()
+    C->>A: ChangePassword (status 1, expiry dihapus)
+    P-->>U: kembali ke form login (lanjut alur 2)
+```
+
+#### 2. Admin: login normal
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Admin
+    participant P as login.jsx
+    participant S as FE services
+    participant C as AuthController
+    participant A as Actions · DB
+    U->>P: username (blur)
+    P->>S: AuthService.checkReset()
+    S->>C: POST login/check
+    C-->>S: expired_at null (bukan mode PIN)
+    U->>P: password (atau autofill password manager)
+    P->>S: AuthService.login()
+    S->>C: POST /login
+    Note over C,A: rate limit · Hash::check<br/>isLocked · resetExpired
+    C->>A: IssueLoginToken
+    C-->>S: session cookie (header token di APP_ENV=local)
+    P-->>U: tawarkan simpan password (PasswordCredential)
+    P-->>U: dashboard /
+```
+
+#### 3. Terminal: login pertama
+PIN 6 digit dikirim ke email outlet saat terminal dibuat (`CreateTerminal`) atau di-reset (`ResetTerminalPassword`, juga lewat Reset Device web).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Kasir · OS
+    participant P as login.jsx
+    participant S as FE services
+    participant C as AuthController
+    participant A as Actions · DB
+    A-->>U: email PIN 6 digit ke outlet
+    U->>P: username · PIN
+    P->>S: AuthService.login()
+    S->>C: POST /login
+    C-->>S: session · status 3
+    P-->>U: form password baru
+    U->>P: password baru ×2
+    S->>C: POST user/reset
+    C->>A: ChangePassword
+    Note over C,A: INACTIVE<br/>jendela daftar dibuka
+    P->>S: chooseRegistrationMethod()
+    S->>C: GET user/challenge
+    Note over C,A: WebSignature::createChallenge<br/>challenge disimpan di cache
+    S-->>U: prompt Windows Hello (WebAuthnService.create)
+    U->>S: sidik jari / PIN perangkat
+    S->>C: POST user/register-web-key
+    Note over C,A: cek password · takeChallenge<br/>WebAuthn::verifyRegistration
+    C->>A: RegisterWebKey
+    Note over C,A: ACTIVE<br/>expiry +WEB_KEY_EXP_DAYS<br/>jendela daftar ditutup
+    S->>S: CryptoService.saveKeys() ke IndexedDB
+    P-->>U: /terminal/outlet
+```
+
+- **Prompt Windows Hello dibatalkan**: kasir bisa login lagi dengan password baru selama jendela daftar masih terbuka. Setelah itu muncul *PIN telah kadaluarsa* dan admin perlu reset lagi.
+- **Perangkat tanpa Windows Hello**: muncul dialog *Verifikasi perangkat tidak tersedia* dengan pilihan Security Key atau lanjut tanpa verifikasi perangkat (browser key RSA). Jika `BSG_APP_QRIS_WEB_KEY_REQUIRE_WEBAUTHN=true`, pilihan RSA ditolak dengan `WEBAUTHN_REQUIRED`.
+
+#### 4. Terminal: login normal
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Kasir · OS
+    participant P as login.jsx
+    participant S as FE services
+    participant C as AuthController
+    participant A as Actions · DB
+    U->>P: password, atau tombol Terminal
+    P->>S: CryptoService.getKeys() untuk terminal_origin
+    S->>C: POST /login
+    Note over C,A: terikat · key belum expired
+    C-->>S: 401 CHALLENGE_REQUIRED
+    P->>S: handleTerminalLogin()
+    S->>C: GET user/challenge
+    S-->>U: prompt Windows Hello (WebAuthnService.sign)
+    U->>S: sidik jari / PIN perangkat
+    S->>C: POST user/verify-challenge
+    Note over C,A: takeChallenge · WebAuthn::verifyLogin<br/>status · web_status · expiry
+    C->>A: sign count · expiry +WEB_KEY_EXP_DAYS
+    C-->>S: session
+    P-->>U: /terminal/outlet
+```
+
+- **Tombol Terminal** langsung ke `handleTerminalLogin()` (langkah 6), tanpa password.
+- **`terminal_origin`** adalah user yang key-nya tersimpan di browser ini. Jika browser masih dipakai terminal aktif lain, `POST /login` ditolak sebelum challenge.
+
+#### 5. Terminal: key expired
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Kasir / Admin
+    participant P as login.jsx / outlets.jsx
+    participant S as FE services
+    participant C as Controller
+    participant A as Actions · DB
+    U->>P: login Terminal (kasir)
+    S->>C: POST user/verify-challenge
+    Note over C,A: AuthController · webKeyExpired()
+    C-->>S: 401 KEY_EXPIRED
+    S->>S: CryptoService.clearKeys()
+    P-->>U: hubungi Admin untuk Reset Device
+    Note over U,C: login dengan password juga ditolak<br/>(Device Terminal belum terdaftar...)
+    U->>P: Reset Perangkat Web (admin, outlets.jsx)
+    S->>C: POST terminal/reset/device
+    Note over C,A: MerchantController · requirePassword()
+    C->>A: ResetTerminalDevice → ResetTerminalPassword
+    Note over C,A: PIN baru · status 3<br/>key & session dihapus
+    A-->>U: email PIN ke outlet
+    Note over U: lanjut ke alur 3
+```
+
+Dari sisi bank, **Reset Password** terminal di aplikasi acquirer juga mengirim PIN baru dan menghasilkan alur yang sama.
 
 ## 4. DEPLOYMENT
 - Jalankan perintah berikut untuk menjalankan proses Deployment:
