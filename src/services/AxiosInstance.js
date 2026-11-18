@@ -157,4 +157,56 @@ const axiosInstance = () => {
   return instance;
 };
 
+/**
+ * POST that reads an NDJSON response line by line, calling onLine(object) as each line arrives.
+ * Axios can't stream a response body in the browser, so this uses fetch with the same auth as axiosInstance.
+ * Non-2xx answers are thrown as { response: { status, data } } so callers' axios-style catch blocks keep working.
+ */
+export const streamPost = async (path, body, onLine) => {
+  const res = await fetch(API + path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/x-ndjson, application/json',
+      ...(ENV !== 'production' && {
+        'X-BSG-WEBMRCH-TOKEN': localStorage.getItem('qris-web-merchant-token') ?? 'unused',
+      }),
+    },
+    credentials: ENV === 'production' ? 'include' : 'same-origin',
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+
+    // same as the axios interceptor
+    if (res.status === 401 || res.status === 403) {
+      AuthService.removeSession();
+      if (window.location.pathname !== '/login') {
+        window.location.replace('/login');
+      }
+    }
+    toast.error(data?.error_msg ? 'Proses Gagal: ' + data.error_msg : 'Proses Gagal');
+
+    throw { response: { status: res.status, data } };
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffered = '';
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    buffered += decoder.decode(value, { stream: !done });
+
+    const lines = buffered.split('\n');
+    buffered = lines.pop(); // keep a partial last line for the next read
+    lines.filter(Boolean).forEach((line) => onLine(JSON.parse(line)));
+
+    if (done) break;
+  }
+
+  if (buffered.trim()) onLine(JSON.parse(buffered));
+};
+
 export default axiosInstance;

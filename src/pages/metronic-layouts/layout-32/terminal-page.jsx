@@ -6,7 +6,7 @@ import moment from 'moment';
 import { useTheme } from 'next-themes';
 import QRCode from 'qrcode';
 import AuthService from '@/services/AuthService.js';
-import axiosInstance from '@/services/AxiosInstance.js';
+import axiosInstance, { streamPost } from '@/services/AxiosInstance.js';
 import ImagePrintService from '@/services/ImagePrintService.js';
 import QRService from '@/services/QRService.js';
 import { Badge } from '@/components/ui/badge.jsx';
@@ -280,9 +280,10 @@ export function TerminalPage() {
     if (!history.length) return [];
     return history
       .slice()
-      .sort((a, b) => new Date(b.timestamprq) - new Date(a.timestamprq))
+      // newest first; "Y-m-d H:i:s" sorts as text, and new Date() can't parse it in Safari
+      .sort((a, b) => String(b.timestamprq ?? '').localeCompare(String(a.timestamprq ?? '')))
       .filter((item) => {
-        if (filters.timestamprq && !new Date(item.timestamprq).toLocaleString('id-ID').toLowerCase().includes(filters.timestamprq.toLowerCase())) {
+        if (filters.timestamprq && !moment(item.timestamprq).toDate().toLocaleString('id-ID').toLowerCase().includes(filters.timestamprq.toLowerCase())) {
           return false;
         }
         const amountValue = parseFloat(filters.amount.value);
@@ -360,13 +361,21 @@ export function TerminalPage() {
         return;
       }
 
-      const { data } = await axiosInstance().post(`/history/${merchantId}/trx`, payload);
-      const transactionsArray = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-      const mapped = transactionsArray.map((tx) => ({
-        ...tx,
-        issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
-      }));
-      setHistory(mapped);
+      // NDJSON stream; a terminal user has one outlet, so this is one `outlet` line (or an `error` line), then `done`
+      setHistory([]);
+      await streamPost(`/history/${merchantId}/trx`, payload, (line) => {
+        if (line.type === 'outlet') {
+          setHistory((prev) => [
+            ...prev,
+            ...(line.data ?? []).map((tx) => ({
+              ...tx,
+              issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
+            })),
+          ]);
+        } else if (line.type === 'error') {
+          setErrorHistory(line.error_msg ?? 'Gagal mengambil data.');
+        }
+      });
     } catch (e) {
       setErrorHistory(e?.response?.data?.error_msg ?? 'Gagal mengambil data.');
     } finally {
@@ -378,7 +387,7 @@ export function TerminalPage() {
     if (filteredHistory.length === 0) return;
     const headers = ['Tanggal', 'Amount', 'Issuer', 'Outlet', 'Terminal', 'RRN', 'From Name', 'From Acc', 'To Acc'];
     const rows = filteredHistory.map(item => [
-      `"${new Date(item.timestamprq).toLocaleString('id-ID')}"`,
+      `"${moment(item.timestamprq).toDate().toLocaleString('id-ID')}"`,
       item.amount,
       `"${item.issuer || ''}"`,
       `"${item.outlet || ''}"`,
@@ -1060,7 +1069,7 @@ export function TerminalPage() {
                                   </Tooltip>
                                 </td>
                                 <td className="py-2 pr-4 whitespace-nowrap">
-                                  {new Date(row.timestamprq).toLocaleString(
+                                  {moment(row.timestamprq).toDate().toLocaleString(
                                     'id-ID',
                                   )}
                                 </td>
@@ -1178,7 +1187,7 @@ export function TerminalPage() {
                     <span className="text-muted-foreground">Tanggal:</span>
                     <span className="font-medium">
                       {selectedTx
-                        ? new Date(selectedTx.timestamprq).toLocaleString(
+                        ? moment(selectedTx.timestamprq).toDate().toLocaleString(
                             'id-ID',
                           )
                         : '-'}

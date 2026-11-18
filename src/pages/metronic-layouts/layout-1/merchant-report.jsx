@@ -6,7 +6,7 @@ import moment from 'moment';
 import { useTheme } from 'next-themes';
 import * as Recharts from 'recharts';
 import AuthService from '@/services/AuthService.js';
-import axiosInstance from '@/services/AxiosInstance.js';
+import { streamPost } from '@/services/AxiosInstance.js';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardToolbar } from '@/components/ui/card.jsx';
@@ -149,7 +149,11 @@ function IssuerLogo({ name }) {
  */
 export function MerchantReportPage() {
   const { theme } = useTheme();
-  const { merchant } = useAppData();
+  const { merchant, outlets } = useAppData();
+  // one outlet means "all" is the same thing, so the picker only shows with two or more
+  const outletOptions = Array.isArray(outlets) && outlets.length > 1 ? outlets : [];
+  const [selectedOutlet, setSelectedOutlet] = useState('');
+  const [failedOutlets, setFailedOutlets] = useState(0);
 
   // Local UI state
   const startOfToday = () => moment().startOf('day').toDate();
@@ -317,7 +321,8 @@ if (key === '30d')
     if (!history.length) return [];
     return history
       .slice()
-      .sort((a, b) => new Date(b.timestamprq) - new Date(a.timestamprq))
+      // newest first; "Y-m-d H:i:s" sorts as text, and new Date() can't parse it in Safari
+      .sort((a, b) => String(b.timestamprq ?? '').localeCompare(String(a.timestamprq ?? '')))
       .filter((item) => {
         // Date filter
         // match against the same text the table shows
@@ -456,6 +461,7 @@ if (key === '30d')
         kdUser: session.kd_user,
         date_from: formatDateLocal(dateFrom),
         date_to: formatDateLocal(dateTo),
+        outlet: selectedOutlet || null,
       };
 
       // Mock mode: generate 50 dummy records locally
@@ -465,16 +471,22 @@ if (key === '30d')
         return;
       }
 
-      const { data } = await axiosInstance().post(`/history/${merchantId}/trx`, payload);
-      
-      // Check if the actual array is inside data.data (from the API response structure), 
-      // otherwise fallback to data if the API ever returns a direct array.
-      const transactionsArray = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-
-      setHistory(transactionsArray.map((tx) => ({
-        ...tx,
-        issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
-      })));
+      // NDJSON: one line per outlet as it arrives, then `done`. Rows show while the loader stays on.
+      setHistory([]);
+      setFailedOutlets(0);
+      await streamPost(`/history/${merchantId}/trx`, payload, (line) => {
+        if (line.type === 'outlet') {
+          setHistory((prev) => [
+            ...prev,
+            ...(line.data ?? []).map((tx) => ({
+              ...tx,
+              issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
+            })),
+          ]);
+        } else if (line.type === 'error') {
+          setFailedOutlets((n) => n + 1);
+        }
+      });
     } catch (error) {
       setError(error?.response?.data?.error_msg ?? 'Gagal mengambil data. Coba lagi.');
     } finally {
@@ -491,7 +503,7 @@ if (key === '30d')
 
     // Using filtered and sorted data
     const rows = filteredHistory.map(item => [
-      `"${new Date(item.timestamprq).toLocaleString('id-ID')}"`,
+      `"${moment(item.timestamprq).toDate().toLocaleString('id-ID')}"`,
       item.amount,
       `"${item.issuer || ''}"`,
       `"${item.outlet || ''}"`,
@@ -620,6 +632,22 @@ if (key === '30d')
             </div>
 
             <div className="flex-1" />
+            {outletOptions.length > 0 && (
+              <select
+                aria-label="Outlet"
+                className="h-8.5 border border-input bg-background rounded-md px-2"
+                value={selectedOutlet}
+                onChange={(e) => setSelectedOutlet(e.target.value)}
+                disabled={loadingHistory}
+              >
+                <option value="">Semua Outlet</option>
+                {outletOptions.map((outlet) => (
+                  <option key={outlet.XID} value={outlet.XID}>
+                    {outlet.outlatName || outlet.MPAN}
+                  </option>
+                ))}
+              </select>
+            )}
             <Button
               onClick={handleTransactionHistory}
               disabled={loadingHistory}
@@ -638,6 +666,11 @@ if (key === '30d')
           </div>
 
           {error ? <div className="text-red-500 text-sm">{error}</div> : null}
+          {failedOutlets > 0 ? (
+            <div className="text-amber-600 text-sm">
+              {failedOutlets} outlet gagal dimuat; data di bawah belum lengkap.
+            </div>
+          ) : null}
         </CardContent>
       </Card>
       {/* KPI Summary */}
@@ -1072,7 +1105,7 @@ if (key === '30d')
                     <span className="text-muted-foreground">Tanggal:</span>
                     <span className="font-medium">
                       {selectedTx
-                        ? new Date(selectedTx.timestamprq).toLocaleString(
+                        ? moment(selectedTx.timestamprq).toDate().toLocaleString(
                             'id-ID',
                           )
                         : '-'}
