@@ -507,6 +507,9 @@ export function LoginPage() {
           alt="BSG Web Merchant"
           className="w-full h-full"
           onLoad={(e) => setWaveTones(imageTones(e.currentTarget))}
+          // Deters casual "Copy/Save image"; the file is still reachable through DevTools or its URL
+          onContextMenu={(e) => e.preventDefault()}
+          draggable={false}
         />
       </div>
 
