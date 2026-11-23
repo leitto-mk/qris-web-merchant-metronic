@@ -191,6 +191,14 @@
   /** Animations **/
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  --animate-wave: wave 20s linear infinite;
+
+  /* The wave SVG is two identical periods wide, so shifting by half loops seamlessly */
+  @keyframes wave {
+    to {
+      transform: translateX(-50%);
+    }
+  }
 
   @keyframes marquee {
     from {

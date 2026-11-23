@@ -7,6 +7,7 @@ import { z } from 'zod';
 import AuthService from '@/services/AuthService';
 import CryptoService from '@/services/CryptoService';
 import WebAuthnService from '@/services/WebAuthnService';
+import { imageTones } from '@/lib/dominant-tones';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,50 @@ import { Button } from '@/components/ui/button.jsx';
 import { Input, InputWrapper } from '@/components/ui/input.jsx';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp.jsx';
 
+// Two identical wave periods (0-1440, 1440-2880) so the -50% keyframe loops without a seam
+const WAVE_PATH =
+  'M0 160 C240 60 480 60 720 160 C960 260 1200 260 1440 160 C1680 60 1920 60 2160 160 C2400 260 2640 260 2880 160 V320 H0 Z';
+
+// Colours come from the login illustration (see imageTones); swap alternates which tone leads each layer
+const WAVES = [
+  { height: 'h-72', opacity: 0.25, duration: '34s', reverse: true, swap: true },
+  { height: 'h-56', opacity: 0.3, duration: '24s' },
+  { height: 'h-40', opacity: 0.45, duration: '16s', swap: true },
+];
+// Until the illustration loads, or if its colours can't be read: lighter shades of the panel's #13131a
+const FALLBACK_TONES = ['#3a3a55', '#22222f'];
+
+function WaveBackground({ tones }) {
+  const [a, b] = tones ?? FALLBACK_TONES;
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      {WAVES.map((w, i) => {
+        const [from, to] = w.swap ? [b, a] : [a, b];
+        return (
+          <svg
+            key={i}
+            viewBox="0 0 2880 320"
+            preserveAspectRatio="none"
+            className={`absolute bottom-0 left-0 w-[200%] ${w.height} animate-wave motion-reduce:animate-none`}
+            style={{ animationDuration: w.duration, animationDirection: w.reverse ? 'reverse' : 'normal', opacity: w.opacity }}
+          >
+            <defs>
+              <linearGradient id={`login-wave-${i}`} x1="0" x2="1" y1="0" y2="0">
+                {/* Repeats per wave period, like the path, so the loop has no colour jump */}
+                <stop offset="0%" stopColor={from} />
+                <stop offset="25%" stopColor={to} />
+                <stop offset="50%" stopColor={from} />
+                <stop offset="75%" stopColor={to} />
+                <stop offset="100%" stopColor={from} />
+              </linearGradient>
+            </defs>
+            <path d={WAVE_PATH} fill={`url(#login-wave-${i})`} />
+          </svg>
+        );
+      })}
+    </div>
+  );
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -37,6 +82,7 @@ export function LoginPage() {
   const methodResolver = useRef(null);
   const securityKeyBtn = useRef(null);
   const [showAccessTypeSelection, setShowAccessTypeSelection] = useState(false);
+  const [waveTones, setWaveTones] = useState(null);
   // Set when the username has a pending password reset: the password field becomes the emailed 6-digit PIN
   const [pinExpiredAt, setPinExpiredAt] = useState(location.state?.expiredAt ?? null);
   const [now, setNow] = useState(Date.now());
@@ -460,12 +506,14 @@ export function LoginPage() {
           src={loginImageRandomizer()}
           alt="BSG Web Merchant"
           className="w-full h-full"
+          onLoad={(e) => setWaveTones(imageTones(e.currentTarget))}
         />
       </div>
 
       {/* Right Section - Login Form, full width on small screens */}
-      <div className="w-full md:w-2/4 p-6 md:p-12 from-slate-900 via-slate-600 to-slate-950 flex flex-col justify-center items-center h-full overflow-y-auto shrink-0">
-        <div className="w-full max-w-md">
+      <div className="relative isolate w-full md:w-2/4 p-6 md:p-12 flex flex-col justify-center items-center h-full overflow-y-auto shrink-0">
+        <WaveBackground tones={waveTones} />
+        <div className="relative w-full max-w-md">
           <div className="md:hidden text-center mb-8">
             <span className="text-slate-200/90 text-3xl font-bold">
               BSGMerchant
