@@ -1,7 +1,8 @@
+import { URE_LABELS, hasUreLabels, ureOnly } from '@/lib/helpers';
 import { useCallback, useMemo, useState } from 'react';
 import { useAppData } from '@/context/AppDataContext.jsx';
 import generateTransactionHistory from '@/mocks/transactionHistoryMock.js';
-import { CheckCircle2, ChevronDown, Download, Landmark, Printer } from 'lucide-react';
+import { CheckCircle2, ChevronDown, CircleHelp, Download, Landmark, Printer } from 'lucide-react';
 import moment from 'moment';
 import { useTheme } from 'next-themes';
 import * as Recharts from 'recharts';
@@ -317,6 +318,11 @@ if (key === '30d')
     return ['All', ...Array.from(terminals)];
   }, [history]);
 
+  const kriteriaOf = useMemo(
+    () => Object.fromEntries((Array.isArray(outlets) ? outlets : []).map((o) => [o.MPAN, o.kriteria])),
+    [outlets],
+  );
+
   const filteredHistory = useMemo(() => {
     if (!history.length) return [];
     return history
@@ -379,6 +385,7 @@ if (key === '30d')
         return true;
       });
   }, [history, filters]);
+  const showUre = useMemo(() => hasUreLabels(filteredHistory), [filteredHistory]);
 
   const isFiltered = useMemo(() => {
     return Object.values(filters).some(val => {
@@ -478,10 +485,10 @@ if (key === '30d')
         if (line.type === 'outlet') {
           setHistory((prev) => [
             ...prev,
-            ...(line.data ?? []).map((tx) => ({
+            ...(line.data ?? []).map((tx) => ureOnly({
               ...tx,
               issuer: tx?.issuer === 'QRISAJ' ? 'OFF-US' : tx?.issuer,
-            })),
+            }, kriteriaOf[line.mpan])),
           ]);
         } else if (line.type === 'error') {
           setFailedOutlets((n) => n + 1);
@@ -498,7 +505,8 @@ if (key === '30d')
     if (filteredHistory.length === 0) return;
 
     const headers = [
-      'Tanggal', 'Amount', 'Issuer', 'Outlet', 'Terminal', 'RRN', 'From Name', 'From Acc', 'To Acc'
+      'Tanggal', 'Amount', 'Issuer', 'Outlet', 'Terminal', 'RRN', 'From Name', 'From Acc', 'To Acc',
+      ...(showUre ? URE_LABELS.map(([, label]) => label) : [])
     ];
 
     // Using filtered and sorted data
@@ -511,7 +519,8 @@ if (key === '30d')
       `"${item.rrn || ''}"`,
       `"${item.fromname || ''}"`,
       `"${item.fromacc || ''}"`,
-      `"${item.toacc || ''}"`
+      `"${item.toacc || ''}"`,
+      ...(showUre ? URE_LABELS.map(([key]) => `"${item[key] || ''}"`) : []),
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
@@ -836,6 +845,23 @@ if (key === '30d')
                     <th className="py-2 pr-4">RRN</th>
                     <th className="py-2 pr-4">From Acc</th>
                     <th className="py-2 pr-4">To Acc</th>
+                    {showUre && URE_LABELS.map(([key, label, help]) => (
+                      <th key={key} className="py-2 pr-4 whitespace-nowrap">
+                        <span className="flex items-center justify-between gap-2">
+                          {label}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" aria-label={`About ${label}`} className="text-muted-foreground hover:text-foreground">
+                                <CircleHelp className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-64">
+                              <p>{help}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </span>
+                      </th>
+                    ))}
                     <th className="py-2 pr-4 text-right">Amount</th>
                     <th className="py-2 pr-4 text-center">Action</th>
                   </tr>
@@ -935,6 +961,7 @@ if (key === '30d')
                         }
                       />
                     </td>
+                    {showUre && URE_LABELS.map(([key]) => <td key={key} className="py-2 pr-4"></td>)}
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-1">
                         <select
@@ -991,6 +1018,9 @@ if (key === '30d')
                       <td className="py-2 pr-4 font-mono">
                         {maskAcc(row.toacc)}
                       </td>
+                      {showUre && URE_LABELS.map(([key]) => (
+                        <td key={key} className="py-2 pr-4 font-mono">{row[key] || '-'}</td>
+                      ))}
                       <td className="py-2 pr-4 text-right font-mono whitespace-nowrap">
                         {formatIDR(row.amount)}
                       </td>
@@ -1019,7 +1049,7 @@ if (key === '30d')
                     <tr className="border-t border-dashed">
                       <td className="py-2 pr-4 font-bold">Total Filtered</td>
                       <td
-                        colSpan="7"
+                        colSpan={showUre ? 7 + URE_LABELS.length : 7}
                         className="py-2 pr-4 text-right font-bold"
                       >
                         {filteredTotals.count} records

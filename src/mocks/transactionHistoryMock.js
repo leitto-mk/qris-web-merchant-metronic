@@ -5,6 +5,9 @@ const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const issuers = ['BNI', 'BCA', 'Mandiri', 'BSG', 'Permata', 'Danamon', 'CIMB Niaga', 'BRI', 'OCBC NISP'];
 const outlets = ['Outlet Pusat', 'Outlet Sudirman', 'Outlet Thamrin', 'Outlet Kemang', 'Outlet Kelapa Gading'];
+// rows from this outlet carry the tag 62 labels, as the report does for kriteria URE outlets
+const ureOutlet = 'Outlet Pusat';
+const purposes = ['Pembayaran SPP', 'Iuran Bulanan', 'Retribusi', 'Donasi'];
 
 function randomAccount() {
   // 10-16 digit account number
@@ -49,6 +52,7 @@ export default function generateTransactionHistory({ count = 50, from, to, merch
     const fromname = randomName();
     const fromacc = randomAccount();
     const toacc = randomAccount();
+    const ure = outlet === ureOutlet;
 
     arr.push({
       timestamprq: new Date(ts).toISOString(),
@@ -60,6 +64,9 @@ export default function generateTransactionHistory({ count = 50, from, to, merch
       fromname,
       fromacc,
       toacc,
+      reference_label_05: ure ? `INV${randInt(100000, 999999)}` : null,
+      customer_label_06: ure ? `CUST${randInt(1000, 9999)}` : null,
+      purpose_transaction_08: ure ? purposes[randInt(0, purposes.length - 1)] : null,
       merchant: merchant?.XID ?? null,
     });
   }

@@ -106,3 +106,17 @@ export function formatDateTime(input) {
     hour12: true,
   });
 }
+
+// Tag 62 sub-tags 05/06/08 from the transaction report; shown only for outlets with kriteria URE
+// [response key, column label, EMVCo explanation]
+export const URE_LABELS = [
+  ['reference_label_05', 'Reference Label', 'EMVCo tag 62, sub-tag 05: reference for this payment set by the merchant, e.g. an invoice or bill number.'],
+  ['customer_label_06', 'Customer Label', 'EMVCo tag 62, sub-tag 06: identifies the customer, e.g. a customer ID or member number.'],
+  ['purpose_transaction_08', 'Purpose Transaction', 'EMVCo tag 62, sub-tag 08: the purpose of the payment.'],
+];
+
+// blanks the URE labels on a report row unless its outlet is URE
+export const ureOnly = (tx, kriteria) =>
+  kriteria === 'URE' ? tx : { ...tx, ...Object.fromEntries(URE_LABELS.map(([key]) => [key, null])) };
+
+export const hasUreLabels = (rows) => rows.some((tx) => URE_LABELS.some(([key]) => tx[key]));
