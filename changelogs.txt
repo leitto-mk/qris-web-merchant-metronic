@@ -1,4 +1,10 @@
 0.0.24
+    - Update Deploy.sh
+    - Add EMVCO Labels for URE Report
+    - Block the right-click menu and dragging on the login illustration
+    - Animate gradient waves behind the login form, coloured from the illustration
+    - Show the transaction report as each outlet arrives; add an outlet filter
+    - Document the admin and terminal login flows in the README
     - Enforce the portal CSP (VAPT 5.7); point terminals to admin Reset Device
     - Authenticator prompted when Admin Login succedded
     - Accept Auto-fill by active Authenticator
