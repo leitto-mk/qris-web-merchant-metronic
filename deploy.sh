@@ -138,7 +138,8 @@ PARAMS=(
     "--version <V>|Use a specific version (also --version=<V>)"
     "--use-current|Reuse the latest version in $CHANGELOG: re-tag & rebuild without bumping"
     "--no-build|Changelog, commit, tag & git push only, no docker"
-    "--build-only|Build & push the image only (current version), no changelog or git"
+    "--build-only|Image only, no git: new-build of the current code into :latest (default), or a tag via --version / --use-current"
+    "--push|With --build-only: also push the image (default: build locally, no deployment)"
     "--dry-run|Show the plan without running anything"
     "-y, --yes|No questions or confirmation (default: patch +1, full release)"
     "-h, --help|Show this help"
@@ -170,11 +171,11 @@ If a step fails, everything done before it is rolled back.
 ${B}Parameters${R}
 EOF
     print_params
-    printf '\nWithout --version / --use-current, the last patch number is bumped by 1\n(--build-only uses the current version instead).\n'
+    printf '\nWithout --version / --use-current, the last patch number is bumped by 1\n(--build-only makes a new-build instead: the current code into :latest only, no version tag.\nWith --version / --use-current it rebuilds an existing git tag from that tag'"'"'s files; your checkout does not move).\n'
 }
 
 # ---------- args ----------
-VERSION='' USE_CURRENT=false MODE='' DRY_RUN=false YES=false
+VERSION='' USE_CURRENT=false MODE='' DRY_RUN=false YES=false PUSH='' NEW_BUILD=false
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -183,6 +184,7 @@ while [ $# -gt 0 ]; do
         --use-current) USE_CURRENT=true; shift ;;
         --no-build)    [ "$MODE" = image ] && die "--no-build and --build-only cannot be used together"; MODE=git; shift ;;
         --build-only)  [ "$MODE" = git ] && die "--no-build and --build-only cannot be used together"; MODE=image; shift ;;
+        --push)        PUSH=true; shift ;;
         --dry-run)     DRY_RUN=true; shift ;;
         -y|--yes)      YES=true; shift ;;
         -h|--help)     usage; exit 0 ;;
@@ -194,6 +196,7 @@ ACTIVE=()
 $USE_CURRENT && ACTIVE+=(--use-current)
 [ "$MODE" = git ] && ACTIVE+=(--no-build)
 [ "$MODE" = image ] && ACTIVE+=(--build-only)
+[ -n "$PUSH" ] && ACTIVE+=(--push)
 $DRY_RUN && ACTIVE+=(--dry-run)
 $YES && ACTIVE+=(--yes)
 [ -n "$VERSION" ] && $USE_CURRENT && die "--version and --use-current cannot be used together"
@@ -201,6 +204,7 @@ $YES && ACTIVE+=(--yes)
 
 # ---------- changelog helpers ----------
 current_version() { [ -f "$CHANGELOG" ] && head -n 1 "$CHANGELOG" | tr -d '\r'; }
+tag_commit() { git rev-parse -q --verify "refs/tags/$1^{commit}" 2>/dev/null; }
 
 # Tag the new entry's commits start from: the version below $1 when $1 already has an entry, else the top one.
 changelog_base() {
@@ -249,6 +253,14 @@ restore_ref() {
 # restore_image tag old-id : point a local image tag back (remove it if it did not exist)
 restore_image() {
     if [ -n "$2" ]; then docker tag "$2" "$IMAGE:$1"; else docker rmi "$IMAGE:$1"; fi
+}
+# A new-build uses the working tree like a full release.
+# docker_build image : --build-only builds tag $VERSION's own files (git archive as the context),
+# so an old version gets its old code and Dockerfile and the checkout never moves.
+docker_build() {
+    set -o pipefail # run puts this in a background subshell, so it stays local
+    if [ "$MODE" = image ] && ! $NEW_BUILD; then git archive "$VERSION" | docker build -t "$1" -
+    else docker build -t "$1" .; fi
 }
 
 # ---------- preflight ----------
@@ -306,8 +318,9 @@ fi
 MODE=${MODE:-full}
 if $ASK_VERSION; then
     if [ "$MODE" = image ]; then
-        choose "Version" "Current ${CURRENT:-0.0.1}" "Other version...|--version <V>"
-        [ "$CHOICE" -eq 0 ] && USE_CURRENT=true
+        choose "Version" "New build → :latest only|new-build" \
+            "Current ${CURRENT:-0.0.1} (existing tag)|--use-current" "Other version (existing tag)...|--version <V>"
+        case $CHOICE in 0) NEW_BUILD=true ;; 1) USE_CURRENT=true ;; esac
     else
         choose "Version" \
             "New version $NEXT (patch +1)" \
@@ -315,11 +328,13 @@ if $ASK_VERSION; then
             "Other version...|--version <V>"
         case $CHOICE in 0) VERSION=$NEXT ;; 1) USE_CURRENT=true ;; esac
     fi
-    if [ -z "$VERSION" ] && ! $USE_CURRENT; then
+    if [ -z "$VERSION" ] && ! $USE_CURRENT && ! $NEW_BUILD; then
         while :; do
             ask "Version" "$([ "$MODE" = image ] && echo "${CURRENT:-$NEXT}" || echo "$NEXT")"
-            [[ "$ANSWER" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]] && break
-            warn "Invalid version: $ANSWER"
+            if ! [[ "$ANSWER" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]]; then warn "Invalid version: $ANSWER"
+            elif [ "$MODE" = image ] && ! tag_commit "$ANSWER" >/dev/null; then
+                warn "No tag $ANSWER. Latest tags: $(git tag --sort=-v:refname | head -n 5 | tr '\n' ' ')"
+            else break; fi
         done
         VERSION=$ANSWER
     fi
@@ -328,11 +343,21 @@ fi
 GIT=true BUILD=true
 [ "$MODE" = git ] && BUILD=false
 [ "$MODE" = image ] && GIT=false
-if $USE_CURRENT || { [ "$MODE" = image ] && [ -z "$VERSION" ]; }; then
+if $USE_CURRENT; then
     [ -n "$CURRENT" ] || die "No version in $CHANGELOG yet: pass --version"
     VERSION=$CURRENT
 fi
+# --build-only without a version is a new-build: the current code into :latest only, no version tag
+[ "$MODE" = image ] && [ -z "$VERSION" ] && NEW_BUILD=true
+$NEW_BUILD && VERSION=latest
 VERSION=${VERSION:-$NEXT}
+TAG_AT=$(tag_commit "$VERSION" || true)
+if [ "$MODE" = image ]; then
+    $NEW_BUILD || [ -n "$TAG_AT" ] || die "No tag $VERSION: --build-only builds an existing tag only (latest: $(git tag --sort=-v:refname | head -n 5 | tr '\n' ' '))"
+elif [ -n "$PUSH" ]; then
+    die "--push only works with --build-only (a full release always pushes)"
+fi
+[ "$MODE" = full ] && PUSH=true
 
 # ---------- summary ----------
 section "Summary" "Review it first, nothing changes until you confirm."
@@ -341,26 +366,37 @@ case $MODE in
     git)   printf '    %-10s %s\n' "Deploy" "Git only ${D}(no image)${R}" ;;
     image) printf '    %-10s %s\n' "Deploy" "Image only ${D}(no changelog or git changes)${R}" ;;
 esac
-if [ "$VERSION" = "$CURRENT" ]; then label="$VERSION ${D}(current version)${R}"
+if $NEW_BUILD; then label="new-build ${D}(no version tag, only :latest)${R}"
+elif [ "$VERSION" = "$CURRENT" ]; then label="$VERSION ${D}(current version)${R}"
 else label="${CURRENT:-–} → ${B}$VERSION${R}"; fi
 printf '    %-10s %s\n' "Version" "$label"
-TAG_AT=$(git rev-parse -q --verify "refs/tags/$VERSION^{commit}" 2>/dev/null || true)
 if $GIT && [ -n "$TAG_AT" ]; then
     printf '    %-10s %s\n' "" "${YEL}tag $VERSION already exists and will be moved to the new commit${R}"
-elif ! $GIT && [ "$TAG_AT" != "$(git rev-parse HEAD)" ]; then
-    printf '    %-10s %s\n' "" "${YEL}HEAD is not tagged $VERSION: the image is built from ${HEAD_SHA}${R}"
+elif $NEW_BUILD; then
+    printf '    %-10s %s\n' "Source" "current code ${D}($BRANCH at $HEAD_SHA)${R}"
+elif ! $GIT; then
+    printf '    %-10s %s\n' "Source" "tag $VERSION ${D}(${TAG_AT:0:7}, built from the tag's files; your checkout does not move)${R}"
 fi
 $GIT && printf '    %-10s %s\n' "Remote" "${REMOTES[*]}"
 if $BUILD; then
-    printf '    %-10s %s\n' "Image" "${IMAGE##*/}:$VERSION"
-    printf '    %-10s %s\n' "" "${IMAGE##*/}:latest"
+    if $NEW_BUILD; then
+        printf '    %-10s %s\n' "Image" "${IMAGE##*/}:latest"
+    else
+        printf '    %-10s %s\n' "Image" "${IMAGE##*/}:$VERSION"
+        printf '    %-10s %s\n' "" "${IMAGE##*/}:latest"
+    fi
+    [ "$PUSH" = true ] || printf '    %-10s %s\n' "Push" "${D}no deployment by default: local build only, pick \"deploy now\" or pass --push to push${R}"
 fi
 CMD="./deploy.sh"
 [ "$MODE" = git ] && CMD+=" --no-build"
 [ "$MODE" = image ] && CMD+=" --build-only"
-if [ "$MODE" = image ]; then [ "$VERSION" != "$CURRENT" ] && CMD+=" --version $VERSION"
+if [ "$MODE" = image ]; then
+    if $NEW_BUILD; then :
+    elif [ "$VERSION" = "$CURRENT" ]; then CMD+=" --use-current"
+    else CMD+=" --version $VERSION"; fi
 elif $USE_CURRENT; then CMD+=" --use-current"
 elif [ "$VERSION" != "$NEXT" ]; then CMD+=" --version $VERSION"; fi
+[ "$MODE" = image ] && [ "$PUSH" = true ] && CMD+=" --push"
 printf '    %-10s %s\n' "Command" "${CYN}$CMD -y${R} ${D}(rerun without questions)${R}"
 if $GIT; then
     BASE=$(changelog_base "$VERSION")
@@ -377,12 +413,19 @@ printf '    %-10s %s\n' "Rollback" "${D}any failure undoes the steps before it; 
 if ! $YES && ! $DRY_RUN; then
     if $TTY; then
         echo
-        choose "Continue with the deploy?" "Yes, deploy now" "Cancel"
-        [ "$CHOICE" -eq 0 ] || { printf '  %sCancelled, nothing was changed.%s\n' "$D" "$R"; exit 0; }
+        if [ "$MODE" = image ] && [ -z "$PUSH" ]; then
+            choose "Continue?" "Build only, no deployment" "Yes, deploy now (build & push)|--push" "Cancel"
+            case $CHOICE in 0) PUSH=false ;; 1) PUSH=true ;; *) CHOICE=cancel ;; esac
+        else
+            choose "Continue with the deploy?" "Yes, deploy now" "Cancel"
+            [ "$CHOICE" -eq 0 ] || CHOICE=cancel
+        fi
+        [ "$CHOICE" = cancel ] && { printf '  %sCancelled, nothing was changed.%s\n' "$D" "$R"; exit 0; }
     else
         die "Not an interactive terminal: add --yes to deploy without confirmation"
     fi
 fi
+PUSH=${PUSH:-false} # --build-only without --push or "deploy now": build locally, no deployment
 
 # ---------- local: changelog, commit, tag ----------
 ORIG_SHA=$(git rev-parse HEAD)
@@ -415,17 +458,20 @@ if $BUILD; then
         OLD_LATEST=$(docker image inspect -f '{{.Id}}' "$IMAGE:latest" 2>/dev/null || true)
         OLD_VER=$(docker image inspect -f '{{.Id}}' "$IMAGE:$VERSION" 2>/dev/null || true)
     fi
-    run "Build ${IMAGE##*/}:latest" docker build -t "$IMAGE:latest" .
+    run "Build ${IMAGE##*/}:latest" docker_build "$IMAGE:latest"
     undo run --soft "Restore local image :latest" restore_image latest "${OLD_LATEST:-}"
-    run "Tag :$VERSION" docker tag "$IMAGE:latest" "$IMAGE:$VERSION"
-    undo run --soft "Restore local image :$VERSION" restore_image "$VERSION" "${OLD_VER:-}"
+    if ! $NEW_BUILD; then
+        run "Tag :$VERSION" docker tag "$IMAGE:latest" "$IMAGE:$VERSION"
+        undo run --soft "Restore local image :$VERSION" restore_image "$VERSION" "${OLD_VER:-}"
+    fi
 fi
 
 # ---------- publish ----------
 case $MODE in
     full)  section "Publish" "Git remotes first (can be rolled back), then the registry: :$VERSION, and :latest last." ;;
     git)   section "Publish" "Push the branch and tag $VERSION to ${REMOTES[*]} (rolled back if one fails)." ;;
-    image) section "Publish" "Push to the registry: :$VERSION first, :latest last so it only moves when everything worked." ;;
+    image) if $PUSH && $NEW_BUILD; then section "Publish" "Push :latest to the registry."
+           elif $PUSH; then section "Publish" "Push to the registry: :$VERSION first, :latest last so it only moves when everything worked."; fi ;;
 esac
 if $GIT; then
     for r in "${REMOTES[@]}"; do
@@ -440,9 +486,11 @@ if $GIT; then
         undo run --soft "Restore tag $VERSION on $r" restore_ref "$r" "refs/tags/$VERSION" "$old_tag" "$(git rev-parse "refs/tags/$VERSION" 2>/dev/null)"
     done
 fi
-if $BUILD; then
-    run "Push :$VERSION" docker push "$IMAGE:$VERSION"
-    undo warn "Registry keeps ${IMAGE##*/}:$VERSION (registry tags cannot be rolled back); :latest is unchanged"
+if $BUILD && $PUSH; then
+    if ! $NEW_BUILD; then
+        run "Push :$VERSION" docker push "$IMAGE:$VERSION"
+        undo warn "Registry keeps ${IMAGE##*/}:$VERSION (registry tags cannot be rolled back); :latest is unchanged"
+    fi
     run "Push :latest" docker push "$IMAGE:latest"
 fi
 UNDO=()
@@ -458,8 +506,13 @@ fi
 case $MODE in
     full)  section "Done" "Version $VERSION is tagged & pushed, and the image is ready to pull from the registry." ;;
     git)   section "Done" "Version $VERSION is tagged & pushed to git (no image build)." ;;
-    image) section "Done" "Image :$VERSION and :latest are pushed (no git changes)." ;;
+    image) if $NEW_BUILD && $PUSH; then section "Done" "Image :latest is built from the current code ($HEAD_SHA) and pushed (no git changes)."
+           elif $NEW_BUILD; then section "Done" "Image :latest is built locally from the current code ($HEAD_SHA), nothing was pushed."
+           elif $PUSH; then section "Done" "Image :$VERSION and :latest are built from tag $VERSION and pushed (no git changes)."
+           else section "Done" "Image :$VERSION and :latest are built locally from tag $VERSION, nothing was pushed."; fi ;;
 esac
-printf '  %s✔ Deploy %s succeeded%s %s(%dm %02ds)%s\n' "$B$GRN" "$VERSION" "$R" "$D" $((total / 60)) $((total % 60)) "$R"
-$BUILD && printf '  %s→%s Run locally (qris-web-merchant-api): %sdocker compose -f docker-compose.local.yaml pull && docker compose -f docker-compose.local.yaml up -d%s\n' "$CYN" "$R" "$B" "$R"
+what=Deploy; $PUSH || $GIT || what=Build
+printf '  %s✔ %s %s succeeded%s %s(%dm %02ds)%s\n' "$B$GRN" "$what" "$VERSION" "$R" "$D" $((total / 60)) $((total % 60)) "$R"
+$BUILD && ! $PUSH && printf '  %s→%s Deploy: %s%s --push -y%s %s(build again and push)%s\n' "$CYN" "$R" "$B" "$CMD" "$R" "$D" "$R"
+$BUILD && $PUSH && printf '  %s→%s Run locally (qris-web-merchant-api): %sdocker compose -f docker-compose.local.yaml pull && docker compose -f docker-compose.local.yaml up -d%s\n' "$CYN" "$R" "$B" "$R"
 printf '  %s→ Log: %s%s\n\n' "$D" "$LOG" "$R"
